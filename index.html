@@ -1,0 +1,1238 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Well-Being Tracker</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #ffffff;
+            color: #1f2937;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            color: #0891b2;
+            font-size: 28px;
+            font-weight: 600;
+        }
+
+        .metric-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 30px;
+        }
+
+        .metric-card {
+            background: #f8fafc;
+            border: 2px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-height: 140px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .metric-card:hover {
+            border-color: #0891b2;
+        }
+
+        .metric-card.selected {
+            border-color: #0891b2;
+            background: #f0f9ff;
+        }
+
+        .metric-icon {
+            font-size: 24px;
+            margin-bottom: 8px;
+        }
+
+        .metric-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #374151;
+            margin-bottom: 8px;
+        }
+
+        .metric-value {
+            font-size: 24px;
+            font-weight: 700;
+            color: #0891b2;
+            margin-bottom: 4px;
+        }
+
+        .metric-date {
+            font-size: 12px;
+            color: #9ca3af;
+        }
+
+        .chart-container {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .chart-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .time-selector {
+            display: flex;
+            background: #f1f5f9;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .time-option {
+            padding: 8px 16px;
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            font-size: 14px;
+            color: #64748b;
+            transition: all 0.2s;
+        }
+
+        .time-option.active {
+            background: #0891b2;
+            color: white;
+        }
+
+        .chart-area {
+            height: 400px;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #9ca3af;
+            font-size: 16px;
+        }
+
+        .add-button {
+            display: block;
+            width: 100%;
+            max-width: 300px;
+            margin: 0 auto;
+            padding: 16px 24px;
+            background: #0891b2;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            min-height: 44px;
+        }
+
+        .add-button:hover {
+            background: #0e7490;
+        }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+        }
+
+        .modal {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            padding: 20px 20px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .close-button {
+            background: none;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            color: #9ca3af;
+            min-height: 44px;
+            min-width: 44px;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+            font-size: 14px;
+        }
+
+        .form-input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+            min-height: 44px;
+        }
+
+        .form-input:focus {
+            outline: none;
+            border-color: #0891b2;
+        }
+
+        .bp-inputs {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .bp-input {
+            flex: 1;
+        }
+
+        .bp-separator {
+            font-size: 20px;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .form-textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 6px;
+            font-size: 16px;
+            min-height: 80px;
+            resize: vertical;
+            font-family: inherit;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #0891b2;
+        }
+
+        .save-button {
+            width: 100%;
+            padding: 16px;
+            background: #22c55e;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            min-height: 44px;
+        }
+
+        .save-button:hover {
+            background: #16a34a;
+        }
+
+        .save-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .error-message {
+            color: #dc2626;
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .date-display {
+            background: #f1f5f9;
+            color: #475569;
+            font-weight: 600;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 16px;
+            }
+
+            .metric-cards {
+                grid-template-columns: 1fr;
+            }
+
+            .chart-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+
+            .time-selector {
+                justify-content: center;
+            }
+
+            .modal {
+                width: 95%;
+            }
+
+            .bp-inputs {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .bp-separator {
+                display: none;
+            }
+        }
+
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .chart-svg {
+            width: 100%;
+            height: 100%;
+        }
+
+        .chart-line {
+            fill: none;
+            stroke-width: 2;
+        }
+
+        .weight-line {
+            stroke: #0891b2;
+        }
+
+        .waist-line {
+            stroke: #059669;
+        }
+
+        .systolic-line {
+            stroke: #0891b2;
+        }
+
+        .diastolic-line {
+            stroke: #0e7490;
+        }
+
+        .chart-dot {
+            fill: white;
+            stroke-width: 2;
+            cursor: pointer;
+        }
+
+        .chart-grid {
+            stroke: #e2e8f0;
+            stroke-width: 1;
+        }
+
+        .chart-axis {
+            stroke: #9ca3af;
+            stroke-width: 1;
+        }
+
+        .chart-label {
+            fill: #6b7280;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .tooltip {
+            position: absolute;
+            background: rgba(0, 0, 0, 0.8);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+
+        .reference-line {
+            stroke: #22c55e;
+            stroke-width: 1;
+            stroke-dasharray: 2,2;
+        }
+
+        .healthy-zone {
+            fill: rgba(34, 197, 94, 0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Well-Being Tracker</h1>
+        
+        <div class="metric-cards">
+            <div class="metric-card" data-metric="weight">
+                <div>
+                    <div class="metric-icon">⚖️</div>
+                    <div class="metric-title">Weight</div>
+                </div>
+                <div>
+                    <div class="metric-value" id="weight-value">No data</div>
+                    <div class="metric-date" id="weight-date"></div>
+                </div>
+            </div>
+            
+            <div class="metric-card" data-metric="waist">
+                <div>
+                    <div class="metric-icon">📏</div>
+                    <div class="metric-title">Waist</div>
+                </div>
+                <div>
+                    <div class="metric-value" id="waist-value">No data</div>
+                    <div class="metric-date" id="waist-date"></div>
+                </div>
+            </div>
+            
+            <div class="metric-card selected" data-metric="blood-pressure">
+                <div>
+                    <div class="metric-icon">❤️</div>
+                    <div class="metric-title">Blood Pressure</div>
+                </div>
+                <div>
+                    <div class="metric-value" id="bp-value">No data</div>
+                    <div class="metric-date" id="bp-date"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="chart-container">
+            <div class="chart-header">
+                <div class="chart-title" id="chart-title">Blood Pressure</div>
+                <div class="time-selector">
+                    <button class="time-option active" data-range="90">90 Days</button>
+                    <button class="time-option" data-range="180">6 Months</button>
+                    <button class="time-option" data-range="365">1 Year</button>
+                </div>
+            </div>
+            <div class="chart-area" id="chart-area">
+                Click a metric card to view chart
+            </div>
+        </div>
+
+        <button class="add-button" id="add-measurement-btn">Add New Measurement</button>
+    </div>
+
+    <div class="modal-overlay" id="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <div class="modal-title">Add Measurement</div>
+                <button class="close-button" id="close-modal">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="measurement-form">
+                    <div class="form-group">
+                        <label class="form-label">Date</label>
+                        <input type="text" class="form-input date-display" id="date-display" readonly>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Weight (lbs)</label>
+                        <input type="number" class="form-input" id="weight-input" 
+                               placeholder="Enter weight (optional)" 
+                               step="0.1" min="0" max="500">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Waist (inches)</label>
+                        <input type="number" class="form-input" id="waist-input" 
+                               placeholder="Enter waist measurement (optional)" 
+                               step="0.5" min="0" max="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Blood Pressure (mmHg)</label>
+                        <div class="bp-inputs">
+                            <input type="number" class="form-input bp-input" id="systolic-input" 
+                                   placeholder="120" min="60" max="240">
+                            <span class="bp-separator">/</span>
+                            <input type="number" class="form-input bp-input" id="diastolic-input" 
+                                   placeholder="80" min="40" max="150">
+                        </div>
+                        <div class="error-message" id="bp-error" style="display: none;">
+                            Both systolic and diastolic values must be filled, and systolic must be greater than diastolic.
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label class="form-label">Notes</label>
+                        <textarea class="form-textarea" id="notes-input" 
+                                  placeholder="Add any relevant details..."></textarea>
+                    </div>
+                    
+                    <button type="submit" class="save-button" id="save-button">Save Measurement</button>
+                    <div class="error-message" id="form-error" style="display: none;"></div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="tooltip" id="tooltip"></div>
+
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script>
+        // Firebase configuration (replace with your config)
+        const firebaseConfig = {
+            apiKey: "your-api-key",
+            authDomain: "your-project.firebaseapp.com",
+            projectId: "your-project-id",
+            storageBucket: "your-project.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "your-app-id"
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.firestore();
+
+        // Application state
+        const state = {
+            currentMetric: 'blood-pressure',
+            currentRange: 90,
+            isLoading: false
+        };
+
+        // DOM elements
+        const elements = {
+            metricCards: document.querySelectorAll('.metric-card'),
+            chartArea: document.getElementById('chart-area'),
+            chartTitle: document.getElementById('chart-title'),
+            timeOptions: document.querySelectorAll('.time-option'),
+            addButton: document.getElementById('add-measurement-btn'),
+            modal: document.getElementById('modal-overlay'),
+            closeModal: document.getElementById('close-modal'),
+            form: document.getElementById('measurement-form'),
+            dateDisplay: document.getElementById('date-display'),
+            weightInput: document.getElementById('weight-input'),
+            waistInput: document.getElementById('waist-input'),
+            systolicInput: document.getElementById('systolic-input'),
+            diastolicInput: document.getElementById('diastolic-input'),
+            notesInput: document.getElementById('notes-input'),
+            saveButton: document.getElementById('save-button'),
+            tooltip: document.getElementById('tooltip'),
+            formError: document.getElementById('form-error'),
+            bpError: document.getElementById('bp-error')
+        };
+
+        // Initialize app
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeApp();
+        });
+
+        function initializeApp() {
+            setupEventListeners();
+            updateDateDisplay();
+            loadLatestMeasurements();
+            loadChartData();
+        }
+
+        function setupEventListeners() {
+            // Metric card selection
+            elements.metricCards.forEach(card => {
+                card.addEventListener('click', function() {
+                    selectMetric(this.dataset.metric);
+                });
+            });
+
+            // Time range selection
+            elements.timeOptions.forEach(option => {
+                option.addEventListener('click', function() {
+                    selectTimeRange(parseInt(this.dataset.range));
+                });
+            });
+
+            // Modal controls
+            elements.addButton.addEventListener('click', openModal);
+            elements.closeModal.addEventListener('click', closeModal);
+            elements.modal.addEventListener('click', function(e) {
+                if (e.target === this) closeModal();
+            });
+
+            // Form submission
+            elements.form.addEventListener('submit', handleFormSubmit);
+
+            // Form validation
+            elements.systolicInput.addEventListener('input', validateBloodPressure);
+            elements.diastolicInput.addEventListener('input', validateBloodPressure);
+
+            // Auto-focus weight input when modal opens
+            elements.weightInput.focus();
+        }
+
+        function selectMetric(metric) {
+            // Update visual selection
+            elements.metricCards.forEach(card => {
+                card.classList.toggle('selected', card.dataset.metric === metric);
+            });
+
+            // Update state and chart
+            state.currentMetric = metric;
+            updateChartTitle();
+            loadChartData();
+        }
+
+        function selectTimeRange(range) {
+            // Update visual selection
+            elements.timeOptions.forEach(option => {
+                option.classList.toggle('active', parseInt(option.dataset.range) === range);
+            });
+
+            // Update state and reload data
+            state.currentRange = range;
+            loadChartData();
+        }
+
+        function updateChartTitle() {
+            const titles = {
+                'weight': 'Weight',
+                'waist': 'Waist Measurement',
+                'blood-pressure': 'Blood Pressure'
+            };
+            elements.chartTitle.textContent = titles[state.currentMetric] || 'Chart';
+        }
+
+        function openModal() {
+            elements.modal.style.display = 'block';
+            elements.weightInput.focus();
+            resetForm();
+        }
+
+        function closeModal() {
+            elements.modal.style.display = 'none';
+            resetForm();
+        }
+
+        function resetForm() {
+            elements.form.reset();
+            updateDateDisplay();
+            hideErrors();
+        }
+
+        function updateDateDisplay() {
+            const today = new Date();
+            const options = { 
+                weekday: 'short', 
+                year: 'numeric', 
+                month: 'short', 
+                day: 'numeric' 
+            };
+            elements.dateDisplay.value = today.toLocaleDateString('en-US', options);
+        }
+
+        function validateBloodPressure() {
+            const systolic = elements.systolicInput.value;
+            const diastolic = elements.diastolicInput.value;
+            
+            // Both must be filled or both empty
+            if ((systolic && !diastolic) || (!systolic && diastolic)) {
+                showError(elements.bpError, 'Both systolic and diastolic values must be filled.');
+                return false;
+            }
+
+            // Systolic must be greater than diastolic
+            if (systolic && diastolic && parseInt(systolic) <= parseInt(diastolic)) {
+                showError(elements.bpError, 'Systolic pressure must be greater than diastolic.');
+                return false;
+            }
+
+            hideError(elements.bpError);
+            return true;
+        }
+
+        function showError(element, message) {
+            element.textContent = message;
+            element.style.display = 'block';
+        }
+
+        function hideError(element) {
+            element.style.display = 'none';
+        }
+
+        function hideErrors() {
+            hideError(elements.formError);
+            hideError(elements.bpError);
+        }
+
+        async function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            if (!validateForm()) return;
+
+            const data = collectFormData();
+            
+            try {
+                elements.saveButton.textContent = 'Saving...';
+                elements.saveButton.disabled = true;
+                
+                await saveMeasurement(data);
+                
+                closeModal();
+                await loadLatestMeasurements();
+                await loadChartData();
+                
+            } catch (error) {
+                console.error('Save failed:', error);
+                showError(elements.formError, 'Failed to save measurement. Please try again.');
+            } finally {
+                elements.saveButton.textContent = 'Save Measurement';
+                elements.saveButton.disabled = false;
+            }
+        }
+
+        function validateForm() {
+            hideErrors();
+            
+            // Check if at least one measurement is entered
+            const weight = elements.weightInput.value;
+            const waist = elements.waistInput.value;
+            const systolic = elements.systolicInput.value;
+            const diastolic = elements.diastolicInput.value;
+            
+            if (!weight && !waist && !systolic && !diastolic) {
+                showError(elements.formError, 'Please enter at least one measurement.');
+                return false;
+            }
+
+            // Validate blood pressure
+            if (!validateBloodPressure()) {
+                return false;
+            }
+
+            return true;
+        }
+
+        function collectFormData() {
+            const today = new Date().toISOString().split('T')[0];
+            
+            return {
+                date: today,
+                weight: elements.weightInput.value ? parseFloat(elements.weightInput.value) : null,
+                waist: elements.waistInput.value ? parseFloat(elements.waistInput.value) : null,
+                systolic: elements.systolicInput.value ? parseInt(elements.systolicInput.value) : null,
+                diastolic: elements.diastolicInput.value ? parseInt(elements.diastolicInput.value) : null,
+                notes: elements.notesInput.value || null,
+                timestamp: firebase.firestore.FieldValue.serverTimestamp()
+            };
+        }
+
+        async function saveMeasurement(data) {
+            await db.collection('healthData').add(data);
+        }
+
+        async function loadLatestMeasurements() {
+            try {
+                const metrics = ['weight', 'waist', 'systolic'];
+                
+                for (const metric of metrics) {
+                    let query = db.collection('healthData')
+                        .orderBy('date', 'desc')
+                        .limit(50);
+                    
+                    const snapshot = await query.get();
+                    let latestValue = null;
+                    let latestDate = null;
+                    
+                    snapshot.docs.forEach(doc => {
+                        const data = doc.data();
+                        if (data[metric] !== null && data[metric] !== undefined && !latestValue) {
+                            latestValue = data[metric];
+                            latestDate = data.date;
+                        }
+                    });
+                    
+                    updateMetricDisplay(metric, latestValue, latestDate);
+                }
+                
+            } catch (error) {
+                console.error('Failed to load measurements:', error);
+            }
+        }
+
+        function updateMetricDisplay(metric, value, date) {
+            let displayValue = 'No data';
+            let displayDate = '';
+            
+            if (value !== null) {
+                if (metric === 'weight') {
+                    displayValue = `${value} lbs`;
+                } else if (metric === 'waist') {
+                    displayValue = `${value}"`;
+                } else if (metric === 'systolic') {
+                    // For blood pressure, we need to get diastolic too
+                    loadBloodPressureDisplay();
+                    return;
+                }
+                
+                if (date) {
+                    const dateObj = new Date(date);
+                    displayDate = dateObj.toLocaleDateString('en-US', { 
+                        month: 'short', 
+                        day: 'numeric' 
+                    });
+                }
+            }
+            
+            const valueElement = document.getElementById(`${metric}-value`);
+            const dateElement = document.getElementById(`${metric}-date`);
+            
+            if (valueElement) valueElement.textContent = displayValue;
+            if (dateElement) dateElement.textContent = displayDate;
+        }
+
+        async function loadBloodPressureDisplay() {
+            try {
+                const query = db.collection('healthData')
+                    .orderBy('date', 'desc')
+                    .limit(50);
+                
+                const snapshot = await query.get();
+                let latestSystolic = null;
+                let latestDiastolic = null;
+                let latestDate = null;
+                
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.systolic !== null && data.diastolic !== null && !latestSystolic) {
+                        latestSystolic = data.systolic;
+                        latestDiastolic = data.diastolic;
+                        latestDate = data.date;
+                    }
+                });
+                
+                let displayValue = 'No data';
+                let displayDate = '';
+                
+                if (latestSystolic && latestDiastolic) {
+                    displayValue = `${latestSystolic}/${latestDiastolic}`;
+                    if (latestDate) {
+                        const dateObj = new Date(latestDate);
+                        displayDate = dateObj.toLocaleDateString('en-US', { 
+                            month: 'short', 
+                            day: 'numeric' 
+                        });
+                    }
+                }
+                
+                document.getElementById('bp-value').textContent = displayValue;
+                document.getElementById('bp-date').textContent = displayDate;
+                
+            } catch (error) {
+                console.error('Failed to load blood pressure:', error);
+            }
+        }
+
+        async function loadChartData() {
+            try {
+                elements.chartArea.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">Loading chart data...</div>';
+                
+                const endDate = new Date();
+                const startDate = new Date();
+                startDate.setDate(startDate.getDate() - state.currentRange);
+                
+                const query = db.collection('healthData')
+                    .where('date', '>=', startDate.toISOString().split('T')[0])
+                    .where('date', '<=', endDate.toISOString().split('T')[0])
+                    .orderBy('date', 'asc');
+                
+                const snapshot = await query.get();
+                const data = [];
+                
+                snapshot.docs.forEach(doc => {
+                    const docData = doc.data();
+                    
+                    if (state.currentMetric === 'blood-pressure') {
+                        if (docData.systolic !== null && docData.diastolic !== null) {
+                            data.push({
+                                date: docData.date,
+                                systolic: docData.systolic,
+                                diastolic: docData.diastolic
+                            });
+                        }
+                    } else {
+                        const value = docData[state.currentMetric];
+                        if (value !== null && value !== undefined) {
+                            data.push({
+                                date: docData.date,
+                                value: value
+                            });
+                        }
+                    }
+                });
+                
+                renderChart(data);
+                
+            } catch (error) {
+                console.error('Failed to load chart data:', error);
+                elements.chartArea.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626;">Failed to load chart data</div>';
+            }
+        }
+
+        function renderChart(data) {
+            if (data.length === 0) {
+                elements.chartArea.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">No data available for selected time range</div>';
+                return;
+            }
+
+            const svg = createSVGElement('svg', {
+                class: 'chart-svg',
+                viewBox: '0 0 800 400'
+            });
+
+            const margin = { top: 20, right: 30, bottom: 60, left: 60 };
+            const width = 800 - margin.left - margin.right;
+            const height = 400 - margin.top - margin.bottom;
+
+            // Create scales
+            const xScale = createTimeScale(data, width);
+            const yScale = createValueScale(data, height);
+
+            // Draw grid
+            drawGrid(svg, xScale, yScale, width, height, margin);
+
+            // Draw axes
+            drawAxes(svg, xScale, yScale, width, height, margin, data);
+
+            // Draw chart based on metric type
+            if (state.currentMetric === 'blood-pressure') {
+                drawBloodPressureChart(svg, data, xScale, yScale, margin);
+            } else {
+                drawSingleLineChart(svg, data, xScale, yScale, margin);
+            }
+
+            elements.chartArea.innerHTML = '';
+            elements.chartArea.appendChild(svg);
+        }
+
+        function createSVGElement(tag, attributes = {}) {
+            const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
+            Object.entries(attributes).forEach(([key, value]) => {
+                element.setAttribute(key, value);
+            });
+            return element;
+        }
+
+        function createTimeScale(data, width) {
+            const dates = data.map(d => new Date(d.date));
+            const minDate = new Date(Math.min(...dates));
+            const maxDate = new Date(Math.max(...dates));
+            
+            return {
+                domain: [minDate, maxDate],
+                range: [0, width],
+                scale: function(date) {
+                    const time = new Date(date).getTime();
+                    const minTime = this.domain[0].getTime();
+                    const maxTime = this.domain[1].getTime();
+                    return (time - minTime) / (maxTime - minTime) * this.range[1];
+                }
+            };
+        }
+
+        function createValueScale(data, height) {
+            let values = [];
+            
+            if (state.currentMetric === 'blood-pressure') {
+                values = data.flatMap(d => [d.systolic, d.diastolic]);
+            } else {
+                values = data.map(d => d.value);
+            }
+            
+            const minValue = Math.min(...values);
+            const maxValue = Math.max(...values);
+            const padding = (maxValue - minValue) * 0.1;
+            
+            return {
+                domain: [minValue - padding, maxValue + padding],
+                range: [height, 0],
+                scale: function(value) {
+                    return (this.domain[1] - value) / (this.domain[1] - this.domain[0]) * this.range[0];
+                }
+            };
+        }
+
+        function drawGrid(svg, xScale, yScale, width, height, margin) {
+            const g = createSVGElement('g');
+            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
+            
+            // Vertical grid lines
+            for (let i = 0; i <= 5; i++) {
+                const x = (width / 5) * i;
+                const line = createSVGElement('line', {
+                    class: 'chart-grid',
+                    x1: x,
+                    y1: 0,
+                    x2: x,
+                    y2: height
+                });
+                g.appendChild(line);
+            }
+            
+            // Horizontal grid lines
+            for (let i = 0; i <= 5; i++) {
+                const y = (height / 5) * i;
+                const line = createSVGElement('line', {
+                    class: 'chart-grid',
+                    x1: 0,
+                    y1: y,
+                    x2: width,
+                    y2: y
+                });
+                g.appendChild(line);
+            }
+            
+            svg.appendChild(g);
+        }
+
+        function drawAxes(svg, xScale, yScale, width, height, margin, data) {
+            const g = createSVGElement('g');
+            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
+            
+            // X-axis
+            const xAxis = createSVGElement('line', {
+                class: 'chart-axis',
+                x1: 0,
+                y1: height,
+                x2: width,
+                y2: height
+            });
+            g.appendChild(xAxis);
+            
+            // Y-axis
+            const yAxis = createSVGElement('line', {
+                class: 'chart-axis',
+                x1: 0,
+                y1: 0,
+                x2: 0,
+                y2: height
+            });
+            g.appendChild(yAxis);
+            
+            // X-axis labels (dates)
+            const sampleDates = data.filter((_, i) => i % Math.ceil(data.length / 5) === 0);
+            sampleDates.forEach(d => {
+                const x = xScale.scale(d.date);
+                const date = new Date(d.date);
+                const label = createSVGElement('text', {
+                    class: 'chart-label',
+                    x: x,
+                    y: height + 20,
+                    'text-anchor': 'middle'
+                });
+                label.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                g.appendChild(label);
+            });
+            
+            // Y-axis labels
+            for (let i = 0; i <= 5; i++) {
+                const value = yScale.domain[1] - (yScale.domain[1] - yScale.domain[0]) * (i / 5);
+                const y = (height / 5) * i;
+                const label = createSVGElement('text', {
+                    class: 'chart-label',
+                    x: -10,
+                    y: y + 4,
+                    'text-anchor': 'end'
+                });
+                label.textContent = Math.round(value);
+                g.appendChild(label);
+            }
+            
+            svg.appendChild(g);
+        }
+
+        function drawSingleLineChart(svg, data, xScale, yScale, margin) {
+            const g = createSVGElement('g');
+            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
+            
+            // Create line path
+            const pathData = data.map((d, i) => {
+                const x = xScale.scale(d.date);
+                const y = yScale.scale(d.value);
+                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).join(' ');
+            
+            const path = createSVGElement('path', {
+                class: `chart-line ${state.currentMetric}-line`,
+                d: pathData
+            });
+            g.appendChild(path);
+            
+            // Add data points
+            data.forEach(d => {
+                const x = xScale.scale(d.date);
+                const y = yScale.scale(d.value);
+                const dot = createSVGElement('circle', {
+                    class: `chart-dot ${state.currentMetric}-line`,
+                    cx: x,
+                    cy: y,
+                    r: 4
+                });
+                
+                // Add tooltip functionality
+                dot.addEventListener('mouseenter', (e) => showTooltip(e, d.date, d.value));
+                dot.addEventListener('mouseleave', hideTooltip);
+                
+                g.appendChild(dot);
+            });
+            
+            svg.appendChild(g);
+        }
+
+        function drawBloodPressureChart(svg, data, xScale, yScale, margin) {
+            const g = createSVGElement('g');
+            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
+            
+            // Draw healthy zones (simplified)
+            const healthyZone = createSVGElement('rect', {
+                class: 'healthy-zone',
+                x: 0,
+                y: yScale.scale(130),
+                width: xScale.range[1],
+                height: yScale.scale(90) - yScale.scale(130)
+            });
+            g.appendChild(healthyZone);
+            
+            // Systolic line
+            const systolicPath = data.map((d, i) => {
+                const x = xScale.scale(d.date);
+                const y = yScale.scale(d.systolic);
+                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).join(' ');
+            
+            const systolicLine = createSVGElement('path', {
+                class: 'chart-line systolic-line',
+                d: systolicPath
+            });
+            g.appendChild(systolicLine);
+            
+            // Diastolic line
+            const diastolicPath = data.map((d, i) => {
+                const x = xScale.scale(d.date);
+                const y = yScale.scale(d.diastolic);
+                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
+            }).join(' ');
+            
+            const diastolicLine = createSVGElement('path', {
+                class: 'chart-line diastolic-line',
+                d: diastolicPath
+            });
+            g.appendChild(diastolicLine);
+            
+            // Data points
+            data.forEach(d => {
+                const x = xScale.scale(d.date);
+                
+                // Systolic point
+                const systolicDot = createSVGElement('circle', {
+                    class: 'chart-dot systolic-line',
+                    cx: x,
+                    cy: yScale.scale(d.systolic),
+                    r: 4
+                });
+                systolicDot.addEventListener('mouseenter', (e) => showTooltip(e, d.date, `${d.systolic}/${d.diastolic} mmHg`));
+                systolicDot.addEventListener('mouseleave', hideTooltip);
+                g.appendChild(systolicDot);
+                
+                // Diastolic point
+                const diastolicDot = createSVGElement('circle', {
+                    class: 'chart-dot diastolic-line',
+                    cx: x,
+                    cy: yScale.scale(d.diastolic),
+                    r: 4
+                });
+                diastolicDot.addEventListener('mouseenter', (e) => showTooltip(e, d.date, `${d.systolic}/${d.diastolic} mmHg`));
+                diastolicDot.addEventListener('mouseleave', hideTooltip);
+                g.appendChild(diastolicDot);
+            });
+            
+            svg.appendChild(g);
+        }
+
+        function showTooltip(event, date, value) {
+            const tooltip = elements.tooltip;
+            const dateObj = new Date(date);
+            const formattedDate = dateObj.toLocaleDateString('en-US', { 
+                month: 'short', 
+                day: 'numeric',
+                year: 'numeric'
+            });
+            
+            let displayValue = value;
+            if (typeof value === 'number') {
+                if (state.currentMetric === 'weight') {
+                    displayValue = `${value} lbs`;
+                } else if (state.currentMetric === 'waist') {
+                    displayValue = `${value}"`;
+                }
+            }
+            
+            tooltip.innerHTML = `${displayValue}<br>${formattedDate}`;
+            tooltip.style.display = 'block';
+            tooltip.style.left = event.pageX + 10 + 'px';
+            tooltip.style.top = event.pageY - 10 + 'px';
+        }
+
+        function hideTooltip() {
+            elements.tooltip.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
