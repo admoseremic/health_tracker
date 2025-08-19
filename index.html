@@ -981,8 +981,8 @@
                             {
                                 label: 'Diastolic',
                                 data: data.map(d => d.diastolic),
-                                borderColor: '#0e7490',
-                                backgroundColor: 'rgba(14, 116, 144, 0.1)',
+                                borderColor: '#dc2626',
+                                backgroundColor: 'rgba(220, 38, 38, 0.1)',
                                 tension: 0.1,
                                 pointRadius: 4,
                                 pointHoverRadius: 6
@@ -1037,9 +1037,20 @@
                 let yAxisConfig = {};
                 
                 if (state.currentMetric === 'weight') {
+                    // Auto-scale weight chart with 5-unit multiples
+                    const values = data.map(d => d.value);
+                    const dataMin = Math.min(...values);
+                    const dataMax = Math.max(...values);
+                    const padding = 10; // 10 lb padding
+                    
+                    // Round min down to nearest multiple of 5
+                    const chartMin = Math.floor((dataMin - padding) / 5) * 5;
+                    // Round max up to nearest multiple of 5
+                    const chartMax = Math.ceil((dataMax + padding) / 5) * 5;
+                    
                     yAxisConfig = {
-                        min: 200,
-                        max: 220,
+                        min: chartMin,
+                        max: chartMax,
                         ticks: {
                             stepSize: 5
                         }
