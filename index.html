@@ -554,6 +554,7 @@
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js"></script>
     <script>
         // Firebase configuration
         const firebaseConfig = {
@@ -964,14 +965,13 @@
                 config = {
                     type: 'line',
                     data: {
-                        labels: data.map(d => {
-                            const date = new Date(d.date);
-                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        }),
                         datasets: [
                             {
                                 label: 'Systolic',
-                                data: data.map(d => d.systolic),
+                                data: data.map(d => ({
+                                    x: d.date,
+                                    y: d.systolic
+                                })),
                                 borderColor: '#0891b2',
                                 backgroundColor: 'rgba(8, 145, 178, 0.1)',
                                 tension: 0.1,
@@ -980,7 +980,10 @@
                             },
                             {
                                 label: 'Diastolic',
-                                data: data.map(d => d.diastolic),
+                                data: data.map(d => ({
+                                    x: d.date,
+                                    y: d.diastolic
+                                })),
                                 borderColor: '#dc2626',
                                 backgroundColor: 'rgba(220, 38, 38, 0.1)',
                                 tension: 0.1,
@@ -1006,6 +1009,13 @@
                                 }
                             },
                             x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM d'
+                                    }
+                                },
                                 grid: {
                                     color: '#e2e8f0'
                                 },
@@ -1047,13 +1057,12 @@
                 config = {
                     type: 'line',
                     data: {
-                        labels: data.map(d => {
-                            const date = new Date(d.date);
-                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                        }),
                         datasets: [{
                             label: state.currentMetric === 'weight' ? 'Weight (lbs)' : 'Waist (inches)',
-                            data: data.map(d => d.value),
+                            data: data.map(d => ({
+                                x: d.date,
+                                y: d.value
+                            })),
                             borderColor: color,
                             backgroundColor: color + '20',
                             tension: 0.1,
@@ -1079,6 +1088,13 @@
                                 }
                             },
                             x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM d'
+                                    }
+                                },
                                 grid: {
                                     color: '#e2e8f0'
                                 },
