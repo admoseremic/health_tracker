@@ -1,0 +1,13 @@
+{
+  "name": "health-tracker-import",
+  "version": "1.0.0",
+  "description": "Import script for health tracker data",
+  "main": "import-data.js",
+  "scripts": {
+    "import": "node import-data.js"
+  },
+  "dependencies": {
+    "csv-parser": "^3.0.0",
+    "firebase": "^10.7.1"
+  }
+}

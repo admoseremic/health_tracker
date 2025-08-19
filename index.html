@@ -577,7 +577,6 @@
         const elements = {
             metricCards: document.querySelectorAll('.metric-card'),
             chartArea: document.getElementById('chart-area'),
-            chartTitle: document.getElementById('chart-title'),
             timeOptions: document.querySelectorAll('.time-option'),
             addButton: document.getElementById('add-measurement-btn'),
             modal: document.getElementById('modal-overlay'),
@@ -664,12 +663,7 @@
         }
 
         function updateChartTitle() {
-            const titles = {
-                'weight': 'Weight',
-                'waist': 'Waist Measurement',
-                'blood-pressure': 'Blood Pressure'
-            };
-            elements.chartTitle.textContent = titles[state.currentMetric] || 'Chart';
+            // Chart title removed from UI - no longer needed
         }
 
         function openModal() {
@@ -1010,20 +1004,31 @@
         }
 
         function createValueScale(data, height) {
-            let values = [];
+            let minValue, maxValue;
             
-            if (state.currentMetric === 'blood-pressure') {
-                values = data.flatMap(d => [d.systolic, d.diastolic]);
+            if (state.currentMetric === 'weight') {
+                // Fixed range for weight: 200-220
+                minValue = 200;
+                maxValue = 220;
+            } else if (state.currentMetric === 'blood-pressure') {
+                const values = data.flatMap(d => [d.systolic, d.diastolic]);
+                minValue = Math.min(...values);
+                maxValue = Math.max(...values);
+                const padding = (maxValue - minValue) * 0.1;
+                minValue = minValue - padding;
+                maxValue = maxValue + padding;
             } else {
-                values = data.map(d => d.value);
+                // Dynamic range for waist and other metrics
+                const values = data.map(d => d.value);
+                minValue = Math.min(...values);
+                maxValue = Math.max(...values);
+                const padding = (maxValue - minValue) * 0.1;
+                minValue = minValue - padding;
+                maxValue = maxValue + padding;
             }
             
-            const minValue = Math.min(...values);
-            const maxValue = Math.max(...values);
-            const padding = (maxValue - minValue) * 0.1;
-            
             return {
-                domain: [minValue - padding, maxValue + padding],
+                domain: [minValue, maxValue],
                 range: [height, 0],
                 scale: function(value) {
                     return (this.domain[1] - value) / (this.domain[1] - this.domain[0]) * this.range[0];
@@ -1049,16 +1054,33 @@
             }
             
             // Horizontal grid lines
-            for (let i = 0; i <= 5; i++) {
-                const y = (height / 5) * i;
-                const line = createSVGElement('line', {
-                    class: 'chart-grid',
-                    x1: 0,
-                    y1: y,
-                    x2: width,
-                    y2: y
+            if (state.currentMetric === 'weight') {
+                // Grid lines for weight at 5-unit increments
+                const weightValues = [200, 205, 210, 215, 220];
+                weightValues.forEach(value => {
+                    const y = yScale.scale(value);
+                    const line = createSVGElement('line', {
+                        class: 'chart-grid',
+                        x1: 0,
+                        y1: y,
+                        x2: width,
+                        y2: y
+                    });
+                    g.appendChild(line);
                 });
-                g.appendChild(line);
+            } else {
+                // Regular grid lines for other metrics
+                for (let i = 0; i <= 5; i++) {
+                    const y = (height / 5) * i;
+                    const line = createSVGElement('line', {
+                        class: 'chart-grid',
+                        x1: 0,
+                        y1: y,
+                        x2: width,
+                        y2: y
+                    });
+                    g.appendChild(line);
+                }
             }
             
             svg.appendChild(g);
@@ -1104,17 +1126,34 @@
             });
             
             // Y-axis labels
-            for (let i = 0; i <= 5; i++) {
-                const value = yScale.domain[1] - (yScale.domain[1] - yScale.domain[0]) * (i / 5);
-                const y = (height / 5) * i;
-                const label = createSVGElement('text', {
-                    class: 'chart-label',
-                    x: -10,
-                    y: y + 4,
-                    'text-anchor': 'end'
+            if (state.currentMetric === 'weight') {
+                // Fixed increments of 5 for weight (200, 205, 210, 215, 220)
+                const weightValues = [200, 205, 210, 215, 220];
+                weightValues.forEach(value => {
+                    const y = yScale.scale(value);
+                    const label = createSVGElement('text', {
+                        class: 'chart-label',
+                        x: -10,
+                        y: y + 4,
+                        'text-anchor': 'end'
+                    });
+                    label.textContent = value;
+                    g.appendChild(label);
                 });
-                label.textContent = Math.round(value);
-                g.appendChild(label);
+            } else {
+                // Dynamic labels for other metrics
+                for (let i = 0; i <= 5; i++) {
+                    const value = yScale.domain[1] - (yScale.domain[1] - yScale.domain[0]) * (i / 5);
+                    const y = (height / 5) * i;
+                    const label = createSVGElement('text', {
+                        class: 'chart-label',
+                        x: -10,
+                        y: y + 4,
+                        'text-anchor': 'end'
+                    });
+                    label.textContent = Math.round(value);
+                    g.appendChild(label);
+                }
             }
             
             svg.appendChild(g);
