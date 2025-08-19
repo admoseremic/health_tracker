@@ -34,8 +34,8 @@
 
         .metric-cards {
             display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
             margin-bottom: 30px;
         }
 
@@ -43,10 +43,10 @@
             background: #f8fafc;
             border: 2px solid #e2e8f0;
             border-radius: 12px;
-            padding: 20px;
+            padding: 16px;
             cursor: pointer;
             transition: all 0.3s ease;
-            min-height: 140px;
+            min-height: 120px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -67,14 +67,14 @@
         }
 
         .metric-title {
-            font-size: 16px;
+            font-size: 14px;
             font-weight: 600;
             color: #374151;
-            margin-bottom: 8px;
+            margin-bottom: 6px;
         }
 
         .metric-value {
-            font-size: 24px;
+            font-size: 20px;
             font-weight: 700;
             color: #0891b2;
             margin-bottom: 4px;
@@ -313,7 +313,31 @@
             }
 
             .metric-cards {
-                grid-template-columns: 1fr;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 8px;
+            }
+
+            .metric-card {
+                padding: 12px;
+                min-height: 100px;
+            }
+
+            .metric-title {
+                font-size: 12px;
+                margin-bottom: 4px;
+            }
+
+            .metric-value {
+                font-size: 16px;
+            }
+
+            .metric-date {
+                font-size: 10px;
+            }
+
+            .metric-icon {
+                font-size: 18px;
+                margin-bottom: 4px;
             }
 
             .chart-header {
