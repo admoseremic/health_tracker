@@ -1037,19 +1037,7 @@
                 let yAxisConfig = {};
                 
                 if (state.currentMetric === 'weight') {
-                    // Auto-scale weight chart with 5-unit multiples
-                    const values = data.map(d => d.value);
-                    const dataMin = Math.min(...values);
-                    const dataMax = Math.max(...values);
-                    
-                    // Round min down to nearest multiple of 5
-                    const chartMin = Math.floor(dataMin / 5) * 5;
-                    // Round max up to nearest multiple of 5
-                    const chartMax = Math.ceil(dataMax / 5) * 5;
-                    
                     yAxisConfig = {
-                        min: chartMin,
-                        max: chartMax,
                         ticks: {
                             stepSize: 5
                         }
