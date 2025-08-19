@@ -417,10 +417,10 @@
 </head>
 <body>
     <div class="container">
-        <h1>Well-Being Tracker</h1>
+        <h1>Health Tracker</h1>
         
         <div class="metric-cards">
-            <div class="metric-card" data-metric="weight">
+            <div class="metric-card selected" data-metric="weight">
                 <div>
                     <div class="metric-icon">⚖️</div>
                     <div class="metric-title">Weight</div>
@@ -442,7 +442,7 @@
                 </div>
             </div>
             
-            <div class="metric-card selected" data-metric="blood-pressure">
+            <div class="metric-card" data-metric="blood-pressure">
                 <div>
                     <div class="metric-icon">❤️</div>
                     <div class="metric-title">Blood Pressure</div>
@@ -456,7 +456,7 @@
 
         <div class="chart-container">
             <div class="chart-header">
-                <div class="chart-title" id="chart-title">Blood Pressure</div>
+                <div class="chart-title" id="chart-title">Weight</div>
                 <div class="time-selector">
                     <button class="time-option active" data-range="90">90 Days</button>
                     <button class="time-option" data-range="180">6 Months</button>
@@ -546,7 +546,7 @@
 
         // Application state
         const state = {
-            currentMetric: 'blood-pressure',
+            currentMetric: 'weight',
             currentRange: 90,
             isLoading: false
         };
