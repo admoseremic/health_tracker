@@ -134,11 +134,13 @@
             height: 320px;
             border: 1px solid #e2e8f0;
             border-radius: 8px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #9ca3af;
-            font-size: 16px;
+            padding: 10px;
+            position: relative;
+        }
+
+        .chart-canvas {
+            width: 100%;
+            height: 100%;
         }
 
         .add-button {
@@ -486,7 +488,7 @@
                 </div>
             </div>
             <div class="chart-area" id="chart-area">
-                Click a metric card to view chart
+                <canvas id="chart-canvas" class="chart-canvas"></canvas>
             </div>
         </div>
 
@@ -551,6 +553,7 @@
 
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script>
         // Firebase configuration
         const firebaseConfig = {
@@ -576,7 +579,7 @@
         // DOM elements
         const elements = {
             metricCards: document.querySelectorAll('.metric-card'),
-            chartArea: document.getElementById('chart-area'),
+            chartCanvas: document.getElementById('chart-canvas'),
             timeOptions: document.querySelectorAll('.time-option'),
             addButton: document.getElementById('add-measurement-btn'),
             modal: document.getElementById('modal-overlay'),
@@ -589,10 +592,12 @@
             diastolicInput: document.getElementById('diastolic-input'),
             notesInput: document.getElementById('notes-input'),
             saveButton: document.getElementById('save-button'),
-            tooltip: document.getElementById('tooltip'),
             formError: document.getElementById('form-error'),
             bpError: document.getElementById('bp-error')
         };
+
+        // Chart instance
+        let chartInstance = null;
 
         // Initialize app
         document.addEventListener('DOMContentLoaded', function() {
@@ -898,8 +903,6 @@
 
         async function loadChartData() {
             try {
-                elements.chartArea.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">Loading chart data...</div>';
-                
                 const endDate = new Date();
                 const startDate = new Date();
                 startDate.setDate(startDate.getDate() - state.currentRange);
@@ -938,362 +941,167 @@
                 
             } catch (error) {
                 console.error('Failed to load chart data:', error);
-                elements.chartArea.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #dc2626;">Failed to load chart data</div>';
             }
         }
 
         function renderChart(data) {
+            // Destroy existing chart
+            if (chartInstance) {
+                chartInstance.destroy();
+                chartInstance = null;
+            }
+
             if (data.length === 0) {
-                elements.chartArea.innerHTML = '<div style="display: flex; align-items: center; justify-content: center; height: 100%; color: #9ca3af;">No data available for selected time range</div>';
                 return;
             }
 
-            const svg = createSVGElement('svg', {
-                class: 'chart-svg',
-                viewBox: '0 0 800 320',
-                preserveAspectRatio: 'none'
-            });
-
-            const margin = { top: 15, right: 20, bottom: 35, left: 50 };
-            const width = 800 - margin.left - margin.right;
-            const height = 320 - margin.top - margin.bottom;
-
-            // Create scales
-            const xScale = createTimeScale(data, width);
-            const yScale = createValueScale(data, height);
-
-            // Draw grid
-            drawGrid(svg, xScale, yScale, width, height, margin);
-
-            // Draw axes
-            drawAxes(svg, xScale, yScale, width, height, margin, data);
-
-            // Draw chart based on metric type
+            const ctx = elements.chartCanvas.getContext('2d');
+            
+            // Prepare chart configuration based on metric type
+            let config;
+            
             if (state.currentMetric === 'blood-pressure') {
-                drawBloodPressureChart(svg, data, xScale, yScale, margin);
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => {
+                            const date = new Date(d.date);
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        }),
+                        datasets: [
+                            {
+                                label: 'Systolic',
+                                data: data.map(d => d.systolic),
+                                borderColor: '#0891b2',
+                                backgroundColor: 'rgba(8, 145, 178, 0.1)',
+                                tension: 0.1,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            },
+                            {
+                                label: 'Diastolic',
+                                data: data.map(d => d.diastolic),
+                                borderColor: '#0e7490',
+                                backgroundColor: 'rgba(14, 116, 144, 0.1)',
+                                tension: 0.1,
+                                pointRadius: 4,
+                                pointHoverRadius: 6
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                beginAtZero: false,
+                                grid: {
+                                    color: '#e2e8f0'
+                                },
+                                ticks: {
+                                    color: '#6b7280',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: '#e2e8f0'
+                                },
+                                ticks: {
+                                    color: '#6b7280',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: '#374151',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
             } else {
-                drawSingleLineChart(svg, data, xScale, yScale, margin);
-            }
-
-            elements.chartArea.innerHTML = '';
-            elements.chartArea.appendChild(svg);
-        }
-
-        function createSVGElement(tag, attributes = {}) {
-            const element = document.createElementNS('http://www.w3.org/2000/svg', tag);
-            Object.entries(attributes).forEach(([key, value]) => {
-                element.setAttribute(key, value);
-            });
-            return element;
-        }
-
-        function createTimeScale(data, width) {
-            const dates = data.map(d => new Date(d.date));
-            const minDate = new Date(Math.min(...dates));
-            const maxDate = new Date(Math.max(...dates));
-            
-            return {
-                domain: [minDate, maxDate],
-                range: [0, width],
-                scale: function(date) {
-                    const time = new Date(date).getTime();
-                    const minTime = this.domain[0].getTime();
-                    const maxTime = this.domain[1].getTime();
-                    return (time - minTime) / (maxTime - minTime) * this.range[1];
-                }
-            };
-        }
-
-        function createValueScale(data, height) {
-            let minValue, maxValue;
-            
-            if (state.currentMetric === 'weight') {
-                // Fixed range for weight: 200-220
-                minValue = 200;
-                maxValue = 220;
-            } else if (state.currentMetric === 'blood-pressure') {
-                const values = data.flatMap(d => [d.systolic, d.diastolic]);
-                minValue = Math.min(...values);
-                maxValue = Math.max(...values);
-                const padding = (maxValue - minValue) * 0.1;
-                minValue = minValue - padding;
-                maxValue = maxValue + padding;
-            } else {
-                // Dynamic range for waist and other metrics
-                const values = data.map(d => d.value);
-                minValue = Math.min(...values);
-                maxValue = Math.max(...values);
-                const padding = (maxValue - minValue) * 0.1;
-                minValue = minValue - padding;
-                maxValue = maxValue + padding;
-            }
-            
-            return {
-                domain: [minValue, maxValue],
-                range: [height, 0],
-                scale: function(value) {
-                    return (this.domain[1] - value) / (this.domain[1] - this.domain[0]) * this.range[0];
-                }
-            };
-        }
-
-        function drawGrid(svg, xScale, yScale, width, height, margin) {
-            const g = createSVGElement('g');
-            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
-            
-            // Vertical grid lines
-            for (let i = 0; i <= 5; i++) {
-                const x = (width / 5) * i;
-                const line = createSVGElement('line', {
-                    class: 'chart-grid',
-                    x1: x,
-                    y1: 0,
-                    x2: x,
-                    y2: height
-                });
-                g.appendChild(line);
-            }
-            
-            // Horizontal grid lines
-            if (state.currentMetric === 'weight') {
-                // Grid lines for weight at 5-unit increments
-                const weightValues = [200, 205, 210, 215, 220];
-                weightValues.forEach(value => {
-                    const y = yScale.scale(value);
-                    const line = createSVGElement('line', {
-                        class: 'chart-grid',
-                        x1: 0,
-                        y1: y,
-                        x2: width,
-                        y2: y
-                    });
-                    g.appendChild(line);
-                });
-            } else {
-                // Regular grid lines for other metrics
-                for (let i = 0; i <= 5; i++) {
-                    const y = (height / 5) * i;
-                    const line = createSVGElement('line', {
-                        class: 'chart-grid',
-                        x1: 0,
-                        y1: y,
-                        x2: width,
-                        y2: y
-                    });
-                    g.appendChild(line);
-                }
-            }
-            
-            svg.appendChild(g);
-        }
-
-        function drawAxes(svg, xScale, yScale, width, height, margin, data) {
-            const g = createSVGElement('g');
-            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
-            
-            // X-axis
-            const xAxis = createSVGElement('line', {
-                class: 'chart-axis',
-                x1: 0,
-                y1: height,
-                x2: width,
-                y2: height
-            });
-            g.appendChild(xAxis);
-            
-            // Y-axis
-            const yAxis = createSVGElement('line', {
-                class: 'chart-axis',
-                x1: 0,
-                y1: 0,
-                x2: 0,
-                y2: height
-            });
-            g.appendChild(yAxis);
-            
-            // X-axis labels (dates)
-            const sampleDates = data.filter((_, i) => i % Math.ceil(data.length / 5) === 0);
-            sampleDates.forEach(d => {
-                const x = xScale.scale(d.date);
-                const date = new Date(d.date);
-                const label = createSVGElement('text', {
-                    class: 'chart-label',
-                    x: x,
-                    y: height + 25,
-                    'text-anchor': 'middle'
-                });
-                label.textContent = date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-                g.appendChild(label);
-            });
-            
-            // Y-axis labels
-            if (state.currentMetric === 'weight') {
-                // Fixed increments of 5 for weight (200, 205, 210, 215, 220)
-                const weightValues = [200, 205, 210, 215, 220];
-                weightValues.forEach(value => {
-                    const y = yScale.scale(value);
-                    const label = createSVGElement('text', {
-                        class: 'chart-label',
-                        x: -10,
-                        y: y + 4,
-                        'text-anchor': 'end'
-                    });
-                    label.textContent = value;
-                    g.appendChild(label);
-                });
-            } else {
-                // Dynamic labels for other metrics
-                for (let i = 0; i <= 5; i++) {
-                    const value = yScale.domain[1] - (yScale.domain[1] - yScale.domain[0]) * (i / 5);
-                    const y = (height / 5) * i;
-                    const label = createSVGElement('text', {
-                        class: 'chart-label',
-                        x: -10,
-                        y: y + 4,
-                        'text-anchor': 'end'
-                    });
-                    label.textContent = Math.round(value);
-                    g.appendChild(label);
-                }
-            }
-            
-            svg.appendChild(g);
-        }
-
-        function drawSingleLineChart(svg, data, xScale, yScale, margin) {
-            const g = createSVGElement('g');
-            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
-            
-            // Create line path
-            const pathData = data.map((d, i) => {
-                const x = xScale.scale(d.date);
-                const y = yScale.scale(d.value);
-                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-            }).join(' ');
-            
-            const path = createSVGElement('path', {
-                class: `chart-line ${state.currentMetric}-line`,
-                d: pathData
-            });
-            g.appendChild(path);
-            
-            // Add data points
-            data.forEach(d => {
-                const x = xScale.scale(d.date);
-                const y = yScale.scale(d.value);
-                const dot = createSVGElement('circle', {
-                    class: `chart-dot ${state.currentMetric}-line`,
-                    cx: x,
-                    cy: y,
-                    r: 4
-                });
+                // Single metric chart (weight or waist)
+                const color = state.currentMetric === 'weight' ? '#0891b2' : '#059669';
+                let yAxisConfig = {};
                 
-                // Add tooltip functionality
-                dot.addEventListener('mouseenter', (e) => showTooltip(e, d.date, d.value));
-                dot.addEventListener('mouseleave', hideTooltip);
-                
-                g.appendChild(dot);
-            });
-            
-            svg.appendChild(g);
-        }
-
-        function drawBloodPressureChart(svg, data, xScale, yScale, margin) {
-            const g = createSVGElement('g');
-            g.setAttribute('transform', `translate(${margin.left}, ${margin.top})`);
-            
-            // Draw healthy zones (simplified)
-            const healthyZone = createSVGElement('rect', {
-                class: 'healthy-zone',
-                x: 0,
-                y: yScale.scale(130),
-                width: xScale.range[1],
-                height: yScale.scale(90) - yScale.scale(130)
-            });
-            g.appendChild(healthyZone);
-            
-            // Systolic line
-            const systolicPath = data.map((d, i) => {
-                const x = xScale.scale(d.date);
-                const y = yScale.scale(d.systolic);
-                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-            }).join(' ');
-            
-            const systolicLine = createSVGElement('path', {
-                class: 'chart-line systolic-line',
-                d: systolicPath
-            });
-            g.appendChild(systolicLine);
-            
-            // Diastolic line
-            const diastolicPath = data.map((d, i) => {
-                const x = xScale.scale(d.date);
-                const y = yScale.scale(d.diastolic);
-                return `${i === 0 ? 'M' : 'L'} ${x} ${y}`;
-            }).join(' ');
-            
-            const diastolicLine = createSVGElement('path', {
-                class: 'chart-line diastolic-line',
-                d: diastolicPath
-            });
-            g.appendChild(diastolicLine);
-            
-            // Data points
-            data.forEach(d => {
-                const x = xScale.scale(d.date);
-                
-                // Systolic point
-                const systolicDot = createSVGElement('circle', {
-                    class: 'chart-dot systolic-line',
-                    cx: x,
-                    cy: yScale.scale(d.systolic),
-                    r: 4
-                });
-                systolicDot.addEventListener('mouseenter', (e) => showTooltip(e, d.date, `${d.systolic}/${d.diastolic} mmHg`));
-                systolicDot.addEventListener('mouseleave', hideTooltip);
-                g.appendChild(systolicDot);
-                
-                // Diastolic point
-                const diastolicDot = createSVGElement('circle', {
-                    class: 'chart-dot diastolic-line',
-                    cx: x,
-                    cy: yScale.scale(d.diastolic),
-                    r: 4
-                });
-                diastolicDot.addEventListener('mouseenter', (e) => showTooltip(e, d.date, `${d.systolic}/${d.diastolic} mmHg`));
-                diastolicDot.addEventListener('mouseleave', hideTooltip);
-                g.appendChild(diastolicDot);
-            });
-            
-            svg.appendChild(g);
-        }
-
-        function showTooltip(event, date, value) {
-            const tooltip = elements.tooltip;
-            const dateObj = new Date(date);
-            const formattedDate = dateObj.toLocaleDateString('en-US', { 
-                month: 'short', 
-                day: 'numeric',
-                year: 'numeric'
-            });
-            
-            let displayValue = value;
-            if (typeof value === 'number') {
                 if (state.currentMetric === 'weight') {
-                    displayValue = `${value} lbs`;
-                } else if (state.currentMetric === 'waist') {
-                    displayValue = `${value}"`;
+                    yAxisConfig = {
+                        min: 200,
+                        max: 220,
+                        ticks: {
+                            stepSize: 5
+                        }
+                    };
                 }
+                
+                config = {
+                    type: 'line',
+                    data: {
+                        labels: data.map(d => {
+                            const date = new Date(d.date);
+                            return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                        }),
+                        datasets: [{
+                            label: state.currentMetric === 'weight' ? 'Weight (lbs)' : 'Waist (inches)',
+                            data: data.map(d => d.value),
+                            borderColor: color,
+                            backgroundColor: color + '20',
+                            tension: 0.1,
+                            pointRadius: 4,
+                            pointHoverRadius: 6,
+                            fill: false
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: {
+                                ...yAxisConfig,
+                                grid: {
+                                    color: '#e2e8f0'
+                                },
+                                ticks: {
+                                    color: '#6b7280',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            },
+                            x: {
+                                grid: {
+                                    color: '#e2e8f0'
+                                },
+                                ticks: {
+                                    color: '#6b7280',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            }
+                        }
+                    }
+                };
             }
-            
-            tooltip.innerHTML = `${displayValue}<br>${formattedDate}`;
-            tooltip.style.display = 'block';
-            tooltip.style.left = event.pageX + 10 + 'px';
-            tooltip.style.top = event.pageY - 10 + 'px';
-        }
 
-        function hideTooltip() {
-            elements.tooltip.style.display = 'none';
+            chartInstance = new Chart(ctx, config);
         }
     </script>
 </body>
