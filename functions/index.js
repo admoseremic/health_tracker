@@ -20,47 +20,57 @@ admin.initializeApp();
  * Cloud Function: estimateCalories
  *
  * Accepts a food description and returns calorie estimate using Claude AI
- * Uses onCall for automatic CORS handling via Firebase SDK
+ * Uses onRequest with CORS middleware for proper cross-origin support
  *
- * Request body: { foodDescription: string }
- * Response: {
- *   calories: number,
- *   description: string,
- *   breakdown: { protein: number, carbs: number, fat: number },
- *   confidence: string,
- *   items: array
- * }
+ * Request body: { data: { foodDescription: string } }
+ * Response: { result: { ... } }
  */
-exports.estimateCalories = functions.https.onCall(async (data, context) => {
-  // onCall functions automatically handle CORS via Firebase SDK
-  try {
-    // Validate input
-    if (!data.foodDescription || typeof data.foodDescription !== 'string') {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Food description is required and must be a string'
-      );
-    }
+exports.estimateCalories = functions.https.onRequest((req, res) => {
+  // Handle CORS
+  return cors(req, res, async () => {
+    try {
+      // Only accept POST requests
+      if (req.method !== 'POST') {
+        res.status(405).json({ error: 'Method not allowed' });
+        return;
+      }
 
-    const foodDescription = data.foodDescription.trim();
+      // Extract data from request body (Firebase callable format)
+      const data = req.body.data || req.body;
 
-    if (foodDescription.length === 0) {
-      throw new functions.https.HttpsError(
-        'invalid-argument',
-        'Food description cannot be empty'
-      );
-    }
+      // Validate input
+      if (!data.foodDescription || typeof data.foodDescription !== 'string') {
+        res.status(400).json({
+          error: {
+            message: 'Food description is required and must be a string'
+          }
+        });
+        return;
+      }
 
-    // Get Claude API key from environment config or environment variable
-    // Supports both Firebase config (legacy) and GitHub Actions deployment
-    const apiKey = process.env.CLAUDE_API_KEY || functions.config().claude?.api_key;
+      const foodDescription = data.foodDescription.trim();
 
-    if (!apiKey) {
-      throw new functions.https.HttpsError(
-        'failed-precondition',
-        'Claude API key not configured. Set CLAUDE_API_KEY environment variable or firebase functions:config:set claude.api_key'
-      );
-    }
+      if (foodDescription.length === 0) {
+        res.status(400).json({
+          error: {
+            message: 'Food description cannot be empty'
+          }
+        });
+        return;
+      }
+
+      // Get Claude API key from environment config or environment variable
+      // Supports both Firebase config (legacy) and GitHub Actions deployment
+      const apiKey = process.env.CLAUDE_API_KEY || functions.config().claude?.api_key;
+
+      if (!apiKey) {
+        res.status(500).json({
+          error: {
+            message: 'Claude API key not configured'
+          }
+        });
+        return;
+      }
 
     // Initialize Anthropic client
     const anthropic = new Anthropic({
@@ -122,31 +132,30 @@ Return your response in this exact JSON format (valid JSON only, no markdown):
       throw new Error('Invalid response format from Claude');
     }
 
-    // Return the structured result
-    return {
-      success: true,
-      data: {
-        calories: Math.round(result.calories),
-        description: result.description || foodDescription,
-        breakdown: result.breakdown || { protein: 0, carbs: 0, fat: 0 },
-        confidence: result.confidence || 'medium',
-        items: result.items || []
-      }
-    };
+      // Return the structured result in Firebase callable format
+      res.status(200).json({
+        result: {
+          success: true,
+          data: {
+            calories: Math.round(result.calories),
+            description: result.description || foodDescription,
+            breakdown: result.breakdown || { protein: 0, carbs: 0, fat: 0 },
+            confidence: result.confidence || 'medium',
+            items: result.items || []
+          }
+        }
+      });
 
-  } catch (error) {
-    console.error('Error in estimateCalories:', error);
+    } catch (error) {
+      console.error('Error in estimateCalories:', error);
 
-    // Handle different types of errors
-    if (error instanceof functions.https.HttpsError) {
-      throw error;
+      res.status(500).json({
+        error: {
+          message: 'Failed to estimate calories: ' + error.message
+        }
+      });
     }
-
-    throw new functions.https.HttpsError(
-      'internal',
-      'Failed to estimate calories: ' + error.message
-    );
-  }
+  });
 });
 
 /**
