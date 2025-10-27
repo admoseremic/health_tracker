@@ -1,4 +1,4 @@
-const CACHE_NAME = 'health-tracker-v3';
+const CACHE_NAME = 'health-tracker-v4';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -7,7 +7,8 @@ const urlsToCache = [
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js',
   'https://cdn.jsdelivr.net/npm/chart.js',
-  'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js'
+  'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js',
+  'https://cdn.jsdelivr.net/npm/chartjs-plugin-annotation@3.0.1/dist/chartjs-plugin-annotation.min.js'
 ];
 
 // Install service worker and cache resources
