@@ -1,0 +1,1 @@
+- Whenever you're trying to deploy code, just push to github. You don't need to worry about using firebase node modules and such from this machine.

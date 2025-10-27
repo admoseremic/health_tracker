@@ -8,6 +8,7 @@
 const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const Anthropic = require('@anthropic-ai/sdk');
+const cors = require('cors')({origin: true});
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -16,6 +17,7 @@ admin.initializeApp();
  * Cloud Function: estimateCalories
  *
  * Accepts a food description and returns calorie estimate using Claude AI
+ * Uses onCall for automatic CORS handling via Firebase SDK
  *
  * Request body: { foodDescription: string }
  * Response: {
@@ -27,6 +29,7 @@ admin.initializeApp();
  * }
  */
 exports.estimateCalories = functions.https.onCall(async (data, context) => {
+  // onCall functions automatically handle CORS via Firebase SDK
   try {
     // Validate input
     if (!data.foodDescription || typeof data.foodDescription !== 'string') {
@@ -45,13 +48,14 @@ exports.estimateCalories = functions.https.onCall(async (data, context) => {
       );
     }
 
-    // Get Claude API key from environment config
-    const apiKey = functions.config().claude?.api_key;
+    // Get Claude API key from environment config or environment variable
+    // Supports both Firebase config (legacy) and GitHub Actions deployment
+    const apiKey = process.env.CLAUDE_API_KEY || functions.config().claude?.api_key;
 
     if (!apiKey) {
       throw new functions.https.HttpsError(
         'failed-precondition',
-        'Claude API key not configured'
+        'Claude API key not configured. Set CLAUDE_API_KEY environment variable or firebase functions:config:set claude.api_key'
       );
     }
 
