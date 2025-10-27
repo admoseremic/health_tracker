@@ -1,1 +1,2 @@
 - Whenever you're trying to deploy code, just push to github. You don't need to worry about using firebase node modules and such from this machine.
+- Please don't deploy via firebase CLI, just push to github where github actions will handle deployment
