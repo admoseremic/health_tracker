@@ -931,14 +931,16 @@
 
         function validateForm() {
             hideErrors();
-            
+
             // Check if at least one measurement is entered
             const weight = elements.weightInput.value;
             const waist = elements.waistInput.value;
             const systolic = elements.systolicInput.value;
             const diastolic = elements.diastolicInput.value;
-            
-            if (!weight && !waist && !systolic && !diastolic) {
+            const calories = elements.caloriesInput.value;
+            const foodDescription = elements.foodInput.value;
+
+            if (!weight && !waist && !systolic && !diastolic && !calories && !foodDescription) {
                 showError(elements.formError, 'Please enter at least one measurement.');
                 return false;
             }
