@@ -310,6 +310,29 @@
             cursor: not-allowed;
         }
 
+        .estimate-button {
+            width: 100%;
+            padding: 12px;
+            background: #8b5cf6;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+            min-height: 44px;
+        }
+
+        .estimate-button:hover {
+            background: #7c3aed;
+        }
+
+        .estimate-button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
         .error-message {
             color: #dc2626;
             font-size: 14px;
@@ -539,20 +562,42 @@
                     <div class="form-group">
                         <label class="form-label">Blood Pressure (mmHg)</label>
                         <div class="bp-inputs">
-                            <input type="number" class="form-input bp-input" id="systolic-input" 
+                            <input type="number" class="form-input bp-input" id="systolic-input"
                                    placeholder="120" min="60" max="240">
                             <span class="bp-separator">/</span>
-                            <input type="number" class="form-input bp-input" id="diastolic-input" 
+                            <input type="number" class="form-input bp-input" id="diastolic-input"
                                    placeholder="80" min="40" max="150">
                         </div>
                         <div class="error-message" id="bp-error" style="display: none;">
                             Both systolic and diastolic values must be filled, and systolic must be greater than diastolic.
                         </div>
                     </div>
-                    
+
+                    <div class="form-group">
+                        <label class="form-label">Food & Calories</label>
+                        <textarea class="form-textarea" id="food-input"
+                                  placeholder="What did you eat? (e.g., 'grilled chicken with rice and vegetables')"></textarea>
+                        <button type="button" class="estimate-button" id="estimate-calories-btn" style="display: none; margin-top: 12px;">
+                            ✨ Estimate Calories with AI
+                        </button>
+                        <div id="calorie-estimate-result" style="display: none; margin-top: 12px;">
+                            <div style="display: flex; gap: 12px; align-items: center;">
+                                <div style="flex: 1;">
+                                    <label class="form-label" style="margin-bottom: 4px;">Estimated Calories</label>
+                                    <input type="number" class="form-input" id="calories-input"
+                                           placeholder="Calories" min="0" max="5000">
+                                </div>
+                                <span id="ai-confidence-badge" style="font-size: 11px; padding: 4px 8px; border-radius: 4px; background: #e0e7ff; color: #4338ca; white-space: nowrap; margin-top: 24px;"></span>
+                            </div>
+                            <div id="calorie-breakdown" style="font-size: 12px; color: #6b7280; margin-top: 8px;"></div>
+                            <div id="ai-description" style="font-size: 12px; color: #6b7280; margin-top: 4px; font-style: italic;"></div>
+                        </div>
+                        <div class="error-message" id="food-error" style="display: none; margin-top: 8px;"></div>
+                    </div>
+
                     <div class="form-group">
                         <label class="form-label">Notes</label>
-                        <textarea class="form-textarea" id="notes-input" 
+                        <textarea class="form-textarea" id="notes-input"
                                   placeholder="Add any relevant details..."></textarea>
                     </div>
                     
@@ -605,11 +650,22 @@
             waistInput: document.getElementById('waist-input'),
             systolicInput: document.getElementById('systolic-input'),
             diastolicInput: document.getElementById('diastolic-input'),
+            foodInput: document.getElementById('food-input'),
+            estimateBtn: document.getElementById('estimate-calories-btn'),
+            caloriesInput: document.getElementById('calories-input'),
+            calorieResult: document.getElementById('calorie-estimate-result'),
+            aiConfidenceBadge: document.getElementById('ai-confidence-badge'),
+            calorieBreakdown: document.getElementById('calorie-breakdown'),
+            aiDescription: document.getElementById('ai-description'),
+            foodError: document.getElementById('food-error'),
             notesInput: document.getElementById('notes-input'),
             saveButton: document.getElementById('save-button'),
             formError: document.getElementById('form-error'),
             bpError: document.getElementById('bp-error')
         };
+
+        // Store AI estimate data
+        let aiEstimateData = null;
 
         // Chart instance
         let chartInstance = null;
@@ -668,6 +724,19 @@
             elements.systolicInput.addEventListener('input', validateBloodPressure);
             elements.diastolicInput.addEventListener('input', validateBloodPressure);
 
+            // Food input - show estimate button when user types
+            elements.foodInput.addEventListener('input', function() {
+                const hasText = this.value.trim().length > 0;
+                elements.estimateBtn.style.display = hasText ? 'block' : 'none';
+                // Hide result if user modifies text after estimation
+                if (hasText && aiEstimateData) {
+                    elements.calorieResult.style.opacity = '0.5';
+                }
+            });
+
+            // Estimate calories button
+            elements.estimateBtn.addEventListener('click', estimateCalories);
+
             // Auto-focus weight input when modal opens
             elements.weightInput.focus();
         }
@@ -714,6 +783,70 @@
             elements.form.reset();
             updateDateDisplay();
             hideErrors();
+            // Reset food/calorie UI
+            elements.estimateBtn.style.display = 'none';
+            elements.calorieResult.style.display = 'none';
+            aiEstimateData = null;
+        }
+
+        // Estimate calories using Cloud Function and Claude AI
+        async function estimateCalories() {
+            const foodDescription = elements.foodInput.value.trim();
+
+            if (!foodDescription) {
+                return;
+            }
+
+            try {
+                // Disable button and show loading state
+                elements.estimateBtn.disabled = true;
+                elements.estimateBtn.textContent = '⏳ Estimating...';
+                hideError(elements.foodError);
+
+                // Call Firebase Cloud Function
+                const estimateCaloriesFunc = firebase.functions().httpsCallable('estimateCalories');
+                const result = await estimateCaloriesFunc({ foodDescription });
+
+                if (result.data.success) {
+                    aiEstimateData = result.data.data;
+
+                    // Display results
+                    elements.caloriesInput.value = aiEstimateData.calories;
+                    elements.aiDescription.textContent = aiEstimateData.description;
+
+                    // Display confidence badge
+                    const confidenceColors = {
+                        high: { bg: '#dcfce7', text: '#166534' },
+                        medium: { bg: '#fef9c3', text: '#854d0e' },
+                        low: { bg: '#fee2e2', text: '#991b1b' }
+                    };
+                    const colors = confidenceColors[aiEstimateData.confidence] || confidenceColors.medium;
+                    elements.aiConfidenceBadge.textContent = aiEstimateData.confidence + ' confidence';
+                    elements.aiConfidenceBadge.style.background = colors.bg;
+                    elements.aiConfidenceBadge.style.color = colors.text;
+
+                    // Display breakdown
+                    if (aiEstimateData.breakdown) {
+                        const { protein, carbs, fat } = aiEstimateData.breakdown;
+                        elements.calorieBreakdown.textContent =
+                            `Protein: ${protein}g | Carbs: ${carbs}g | Fat: ${fat}g`;
+                    }
+
+                    // Show result section
+                    elements.calorieResult.style.display = 'block';
+                    elements.calorieResult.style.opacity = '1';
+
+                } else {
+                    throw new Error('Failed to estimate calories');
+                }
+
+            } catch (error) {
+                console.error('Error estimating calories:', error);
+                showError(elements.foodError, 'Failed to estimate calories. Please try again or enter manually.');
+            } finally {
+                elements.estimateBtn.disabled = false;
+                elements.estimateBtn.textContent = '✨ Estimate Calories with AI';
+            }
         }
 
         function updateDateDisplay() {
@@ -763,21 +896,29 @@
 
         async function handleFormSubmit(e) {
             e.preventDefault();
-            
+
             if (!validateForm()) return;
 
             const data = collectFormData();
-            
+
             try {
                 elements.saveButton.textContent = 'Saving...';
                 elements.saveButton.disabled = true;
-                
-                await saveMeasurement(data);
-                
+
+                // Save health measurements (weight, waist, BP) if any exist
+                if (data.weight || data.waist || data.systolic) {
+                    await saveMeasurement(data);
+                }
+
+                // Save food log entry if food description or calories exist
+                if (data.foodDescription || data.calories) {
+                    await saveFoodLog(data);
+                }
+
                 closeModal();
                 await loadLatestMeasurements();
                 await loadChartData();
-                
+
             } catch (error) {
                 console.error('Save failed:', error);
                 showError(elements.formError, 'Failed to save measurement. Please try again.');
@@ -811,20 +952,56 @@
 
         function collectFormData() {
             const today = new Date().toISOString().split('T')[0];
-            
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+
             return {
                 date: today,
+                time: timeString,
                 weight: elements.weightInput.value ? parseFloat(elements.weightInput.value) : null,
                 waist: elements.waistInput.value ? parseFloat(elements.waistInput.value) : null,
                 systolic: elements.systolicInput.value ? parseInt(elements.systolicInput.value) : null,
                 diastolic: elements.diastolicInput.value ? parseInt(elements.diastolicInput.value) : null,
+                foodDescription: elements.foodInput.value ? elements.foodInput.value.trim() : null,
+                calories: elements.caloriesInput.value ? parseInt(elements.caloriesInput.value) : null,
+                aiEstimate: aiEstimateData || null,
                 notes: elements.notesInput.value || null,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
         }
 
         async function saveMeasurement(data) {
-            await db.collection('healthData').add(data);
+            // Save to healthData collection (health metrics only)
+            const healthData = {
+                date: data.date,
+                weight: data.weight,
+                waist: data.waist,
+                systolic: data.systolic,
+                diastolic: data.diastolic,
+                notes: data.notes,
+                timestamp: data.timestamp
+            };
+            await db.collection('healthData').add(healthData);
+        }
+
+        async function saveFoodLog(data) {
+            // Save to foodLog collection (food/calorie data)
+            const foodData = {
+                date: data.date,
+                time: data.time,
+                foodDescription: data.foodDescription,
+                calories: data.calories,
+                timestamp: data.timestamp
+            };
+
+            // Include AI estimate details if available
+            if (data.aiEstimate) {
+                foodData.aiDescription = data.aiEstimate.description;
+                foodData.confidence = data.aiEstimate.confidence;
+                foodData.breakdown = data.aiEstimate.breakdown;
+            }
+
+            await db.collection('foodLog').add(foodData);
         }
 
         async function loadLatestMeasurements() {
@@ -912,11 +1089,53 @@
             }
         }
 
-        // Placeholder for calories display
+        // Load and aggregate calories for the latest day
         async function loadCaloriesDisplay() {
-            // TODO: Implement when calories tracking is added
-            document.getElementById('calories-value').textContent = 'No data';
-            document.getElementById('calories-date').textContent = '';
+            try {
+                // Get latest food log entry to determine most recent date
+                const latestQuery = await db.collection('foodLog')
+                    .orderBy('date', 'desc')
+                    .limit(1)
+                    .get();
+
+                if (latestQuery.empty) {
+                    document.getElementById('calories-value').textContent = 'No data';
+                    document.getElementById('calories-date').textContent = '';
+                    return;
+                }
+
+                const latestDate = latestQuery.docs[0].data().date;
+
+                // Get all entries for the latest date
+                const dayQuery = await db.collection('foodLog')
+                    .where('date', '==', latestDate)
+                    .get();
+
+                // Aggregate calories for the day
+                let totalCalories = 0;
+                dayQuery.forEach(doc => {
+                    const data = doc.data();
+                    if (data.calories) {
+                        totalCalories += data.calories;
+                    }
+                });
+
+                // Display total
+                const displayValue = totalCalories > 0 ? `${totalCalories} cal` : 'No data';
+                const dateObj = new Date(latestDate);
+                const displayDate = dateObj.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric'
+                });
+
+                document.getElementById('calories-value').textContent = displayValue;
+                document.getElementById('calories-date').textContent = displayDate;
+
+            } catch (error) {
+                console.error('Failed to load calories:', error);
+                document.getElementById('calories-value').textContent = 'No data';
+                document.getElementById('calories-date').textContent = '';
+            }
         }
 
         function updateMetricDisplay(metric, value, date) {
@@ -1006,6 +1225,40 @@
                 const snapshot = await query.get();
                 const data = [];
 
+                // Handle calories separately from foodLog collection
+                if (state.currentMetric === 'calories') {
+                    // Query foodLog collection instead
+                    const foodQuery = db.collection('foodLog')
+                        .where('date', '>=', startDate.toISOString().split('T')[0])
+                        .where('date', '<=', endDate.toISOString().split('T')[0])
+                        .orderBy('date', 'asc');
+
+                    const foodSnapshot = await foodQuery.get();
+
+                    // Aggregate calories by day
+                    const caloriesByDay = {};
+                    foodSnapshot.forEach(doc => {
+                        const docData = doc.data();
+                        if (docData.calories) {
+                            if (!caloriesByDay[docData.date]) {
+                                caloriesByDay[docData.date] = 0;
+                            }
+                            caloriesByDay[docData.date] += docData.calories;
+                        }
+                    });
+
+                    // Convert to array format
+                    Object.keys(caloriesByDay).forEach(date => {
+                        data.push({
+                            date: date,
+                            value: caloriesByDay[date]
+                        });
+                    });
+
+                    renderChart(data);
+                    return;
+                }
+
                 snapshot.docs.forEach(doc => {
                     const docData = doc.data();
 
@@ -1028,9 +1281,6 @@
                                 waist: docData.waist
                             });
                         }
-                    } else if (state.currentMetric === 'calories') {
-                        // Placeholder for calories
-                        // TODO: Implement when calories tracking is added
                     } else {
                         // Single metric chart
                         const value = docData[state.currentMetric];
@@ -1271,13 +1521,21 @@
                         }
                     }
                 };
-            } else if (state.currentMetric === 'calories') {
-                // Placeholder for calories chart
-                // TODO: Implement when calories tracking is added
-                return;
             } else {
-                // Single metric chart
-                const color = state.currentMetric === 'weight' ? '#0891b2' : '#059669';
+                // Single metric chart (including calories)
+                let color, label;
+
+                if (state.currentMetric === 'calories') {
+                    color = '#f59e0b'; // Orange for calories
+                    label = 'Calories';
+                } else if (state.currentMetric === 'weight') {
+                    color = '#0891b2'; // Cyan
+                    label = 'Weight (lbs)';
+                } else {
+                    color = '#059669'; // Green
+                    label = 'Waist (inches)';
+                }
+
                 let yAxisConfig = {};
 
                 if (state.currentMetric === 'weight') {
@@ -1292,7 +1550,7 @@
                     type: 'line',
                     data: {
                         datasets: [{
-                            label: state.currentMetric === 'weight' ? 'Weight (lbs)' : 'Waist (inches)',
+                            label: label,
                             data: data.map(d => ({
                                 x: d.date,
                                 y: d.value

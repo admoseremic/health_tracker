@@ -5,7 +5,9 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "HEALTH_TRACKER_REQUIREMENTS.md"
+      "HEALTH_TRACKER_REQUIREMENTS.md",
+      "FOOD_TRACKING_REQUIREMENTS.md",
+      "IMPLEMENTATION_PLAN.md"
     ],
     "rewrites": [
       {
@@ -28,5 +30,9 @@
   "firestore": {
     "rules": "firestore.rules",
     "indexes": "firestore.indexes.json"
+  },
+  "functions": {
+    "source": "functions",
+    "runtime": "nodejs18"
   }
 }
