@@ -4,7 +4,8 @@
  * This file contains Firebase Cloud Functions for the Health Tracker app.
  * Primary function: estimateCalories - uses Claude AI to estimate calories from food descriptions
  *
- * Deployment: Automated via GitHub Actions with proper IAM permissions
+ * Deployment: Automated via GitHub Actions
+ * APIs enabled: Cloud Functions, Cloud Build, Artifact Registry, Extensions, Cloud Billing
  */
 
 const functions = require('firebase-functions');
