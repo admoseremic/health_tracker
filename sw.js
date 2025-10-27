@@ -1,10 +1,11 @@
-const CACHE_NAME = 'health-tracker-v2';
+const CACHE_NAME = 'health-tracker-v3';
 const urlsToCache = [
   '/',
   '/index.html',
   '/manifest.json',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js',
   'https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js',
+  'https://www.gstatic.com/firebasejs/9.22.0/firebase-functions-compat.js',
   'https://cdn.jsdelivr.net/npm/chart.js',
   'https://cdn.jsdelivr.net/npm/chartjs-adapter-date-fns/dist/chartjs-adapter-date-fns.bundle.min.js'
 ];
