@@ -459,28 +459,28 @@
         <h1>Health Tracker</h1>
         
         <div class="metric-cards">
-            <div class="metric-card selected" data-metric="weight">
+            <div class="metric-card selected" data-metric="weight-waist">
                 <div>
-                    <div class="metric-icon">⚖️</div>
-                    <div class="metric-title">Weight</div>
+                    <div class="metric-icon">⚖️📏</div>
+                    <div class="metric-title">Weight/Waist</div>
                 </div>
                 <div>
-                    <div class="metric-value" id="weight-value">No data</div>
-                    <div class="metric-date" id="weight-date"></div>
-                </div>
-            </div>
-            
-            <div class="metric-card" data-metric="waist">
-                <div>
-                    <div class="metric-icon">📏</div>
-                    <div class="metric-title">Waist</div>
-                </div>
-                <div>
-                    <div class="metric-value" id="waist-value">No data</div>
-                    <div class="metric-date" id="waist-date"></div>
+                    <div class="metric-value" id="weight-waist-value">No data</div>
+                    <div class="metric-date" id="weight-waist-date"></div>
                 </div>
             </div>
-            
+
+            <div class="metric-card" data-metric="calories">
+                <div>
+                    <div class="metric-icon">🔥</div>
+                    <div class="metric-title">Calories</div>
+                </div>
+                <div>
+                    <div class="metric-value" id="calories-value">No data</div>
+                    <div class="metric-date" id="calories-date"></div>
+                </div>
+            </div>
+
             <div class="metric-card" data-metric="blood-pressure">
                 <div>
                     <div class="metric-icon">❤️</div>
@@ -586,7 +586,7 @@
 
         // Application state
         const state = {
-            currentMetric: 'weight',
+            currentMetric: 'weight-waist',
             currentRange: 90,
             isLoading: false
         };
@@ -829,31 +829,94 @@
 
         async function loadLatestMeasurements() {
             try {
-                const metrics = ['weight', 'waist', 'systolic'];
-                
-                for (const metric of metrics) {
-                    let query = db.collection('healthData')
-                        .orderBy('date', 'desc')
-                        .limit(50);
-                    
-                    const snapshot = await query.get();
-                    let latestValue = null;
-                    let latestDate = null;
-                    
-                    snapshot.docs.forEach(doc => {
-                        const data = doc.data();
-                        if (data[metric] !== null && data[metric] !== undefined && !latestValue) {
-                            latestValue = data[metric];
-                            latestDate = data.date;
-                        }
-                    });
-                    
-                    updateMetricDisplay(metric, latestValue, latestDate);
-                }
-                
+                // Load weight/waist combined display
+                await loadWeightWaistDisplay();
+
+                // Load blood pressure display
+                await loadBloodPressureDisplay();
+
+                // Load calories display (placeholder for now)
+                await loadCaloriesDisplay();
+
             } catch (error) {
                 console.error('Failed to load measurements:', error);
             }
+        }
+
+        // New function to load the combined weight/waist display
+        async function loadWeightWaistDisplay() {
+            try {
+                const query = db.collection('healthData')
+                    .orderBy('date', 'desc')
+                    .limit(50);
+
+                const snapshot = await query.get();
+                let latestWeight = null;
+                let latestWaist = null;
+                let latestWeightDate = null;
+                let latestWaistDate = null;
+
+                // Find latest weight
+                snapshot.docs.forEach(doc => {
+                    const data = doc.data();
+                    if (data.weight !== null && data.weight !== undefined && !latestWeight) {
+                        latestWeight = data.weight;
+                        latestWeightDate = data.date;
+                    }
+                    if (data.waist !== null && data.waist !== undefined && !latestWaist) {
+                        latestWaist = data.waist;
+                        latestWaistDate = data.date;
+                    }
+                });
+
+                let displayValue = 'No data';
+                let displayDate = '';
+
+                // Display both weight and waist if available
+                if (latestWeight && latestWaist) {
+                    displayValue = `${latestWeight} lbs / ${latestWaist}"`;
+                    // Use the more recent date
+                    const useDate = latestWeightDate > latestWaistDate ? latestWeightDate : latestWaistDate;
+                    if (useDate) {
+                        const dateObj = new Date(useDate);
+                        displayDate = dateObj.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    }
+                } else if (latestWeight) {
+                    displayValue = `${latestWeight} lbs`;
+                    if (latestWeightDate) {
+                        const dateObj = new Date(latestWeightDate);
+                        displayDate = dateObj.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    }
+                } else if (latestWaist) {
+                    displayValue = `${latestWaist}"`;
+                    if (latestWaistDate) {
+                        const dateObj = new Date(latestWaistDate);
+                        displayDate = dateObj.toLocaleDateString('en-US', {
+                            month: 'short',
+                            day: 'numeric'
+                        });
+                    }
+                }
+
+                document.getElementById('weight-waist-value').textContent = displayValue;
+                document.getElementById('weight-waist-date').textContent = displayDate;
+
+            } catch (error) {
+                console.error('Failed to load weight/waist:', error);
+            }
+        }
+
+        // Placeholder for calories display
+        async function loadCaloriesDisplay() {
+            // TODO: Implement when calories tracking is added
+            document.getElementById('calories-value').textContent = 'No data';
+            document.getElementById('calories-date').textContent = '';
         }
 
         function updateMetricDisplay(metric, value, date) {
@@ -934,19 +997,20 @@
                 const endDate = new Date();
                 const startDate = new Date();
                 startDate.setDate(startDate.getDate() - state.currentRange);
-                
+
                 const query = db.collection('healthData')
                     .where('date', '>=', startDate.toISOString().split('T')[0])
                     .where('date', '<=', endDate.toISOString().split('T')[0])
                     .orderBy('date', 'asc');
-                
+
                 const snapshot = await query.get();
                 const data = [];
-                
+
                 snapshot.docs.forEach(doc => {
                     const docData = doc.data();
-                    
+
                     if (state.currentMetric === 'blood-pressure') {
+                        // Blood pressure chart - dual lines
                         if (docData.systolic !== null && docData.diastolic !== null) {
                             data.push({
                                 date: docData.date,
@@ -954,7 +1018,21 @@
                                 diastolic: docData.diastolic
                             });
                         }
+                    } else if (state.currentMetric === 'weight-waist') {
+                        // Weight/Waist combined chart - dual y-axes
+                        // Always push a data point if either weight or waist exists
+                        if (docData.weight !== null || docData.waist !== null) {
+                            data.push({
+                                date: docData.date,
+                                weight: docData.weight,
+                                waist: docData.waist
+                            });
+                        }
+                    } else if (state.currentMetric === 'calories') {
+                        // Placeholder for calories
+                        // TODO: Implement when calories tracking is added
                     } else {
+                        // Single metric chart
                         const value = docData[state.currentMetric];
                         if (value !== null && value !== undefined) {
                             data.push({
@@ -964,9 +1042,9 @@
                         }
                     }
                 });
-                
+
                 renderChart(data);
-                
+
             } catch (error) {
                 console.error('Failed to load chart data:', error);
             }
@@ -984,11 +1062,136 @@
             }
 
             const ctx = elements.chartCanvas.getContext('2d');
-            
+
             // Prepare chart configuration based on metric type
             let config;
-            
-            if (state.currentMetric === 'blood-pressure') {
+
+            if (state.currentMetric === 'weight-waist') {
+                // Weight/Waist combined chart with dual y-axes
+                config = {
+                    type: 'line',
+                    data: {
+                        datasets: [
+                            {
+                                label: 'Weight (lbs)',
+                                data: data.map(d => ({
+                                    x: d.date,
+                                    y: d.weight
+                                })).filter(d => d.y !== null),
+                                borderColor: '#0891b2',
+                                backgroundColor: 'rgba(8, 145, 178, 0.1)',
+                                tension: 0.1,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                yAxisID: 'y-weight',
+                                spanGaps: true
+                            },
+                            {
+                                label: 'Waist (inches)',
+                                data: data.map(d => ({
+                                    x: d.date,
+                                    y: d.waist
+                                })).filter(d => d.y !== null),
+                                borderColor: '#059669',
+                                backgroundColor: 'rgba(5, 150, 105, 0.1)',
+                                tension: 0.1,
+                                pointRadius: 4,
+                                pointHoverRadius: 6,
+                                yAxisID: 'y-waist',
+                                spanGaps: true
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false,
+                        },
+                        scales: {
+                            'y-weight': {
+                                type: 'linear',
+                                position: 'left',
+                                beginAtZero: false,
+                                grid: {
+                                    color: '#e2e8f0'
+                                },
+                                ticks: {
+                                    stepSize: 5,
+                                    color: '#0891b2',
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Weight (lbs)',
+                                    color: '#0891b2',
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            'y-waist': {
+                                type: 'linear',
+                                position: 'right',
+                                beginAtZero: false,
+                                grid: {
+                                    drawOnChartArea: false, // Don't draw grid lines for right axis
+                                },
+                                ticks: {
+                                    color: '#059669',
+                                    font: {
+                                        size: 12
+                                    }
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Waist (inches)',
+                                    color: '#059669',
+                                    font: {
+                                        size: 12,
+                                        weight: 'bold'
+                                    }
+                                }
+                            },
+                            x: {
+                                type: 'time',
+                                time: {
+                                    unit: 'day',
+                                    displayFormats: {
+                                        day: 'MMM d'
+                                    }
+                                },
+                                grid: {
+                                    color: '#e2e8f0'
+                                },
+                                ticks: {
+                                    color: '#6b7280',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        },
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                                labels: {
+                                    color: '#374151',
+                                    font: {
+                                        size: 12
+                                    }
+                                }
+                            }
+                        }
+                    }
+                };
+            } else if (state.currentMetric === 'blood-pressure') {
+                // Blood pressure chart - dual lines on same axis
                 config = {
                     type: 'line',
                     data: {
@@ -1068,11 +1271,15 @@
                         }
                     }
                 };
+            } else if (state.currentMetric === 'calories') {
+                // Placeholder for calories chart
+                // TODO: Implement when calories tracking is added
+                return;
             } else {
-                // Single metric chart (weight or waist)
+                // Single metric chart
                 const color = state.currentMetric === 'weight' ? '#0891b2' : '#059669';
                 let yAxisConfig = {};
-                
+
                 if (state.currentMetric === 'weight') {
                     yAxisConfig = {
                         ticks: {
@@ -1080,7 +1287,7 @@
                         }
                     };
                 }
-                
+
                 config = {
                     type: 'line',
                     data: {

@@ -2,9 +2,8 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
     match /healthData/{document} {
-      // Allow read/write for all users (single-user app in production)
-      // In a multi-user app, you would add authentication checks here
-      allow read, write: if true;
+      // Allow read/write for all users (single-user personal app)
+      allow read, write;
     }
   }
 }
