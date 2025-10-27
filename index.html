@@ -804,8 +804,8 @@
                 elements.estimateBtn.textContent = '⏳ Estimating...';
                 hideError(elements.foodError);
 
-                // Call Firebase Cloud Function
-                const estimateCaloriesFunc = firebase.functions().httpsCallable('estimateCalories');
+                // Call Firebase Cloud Function (V2 with CORS support)
+                const estimateCaloriesFunc = firebase.functions().httpsCallable('estimateCaloriesV2');
                 const result = await estimateCaloriesFunc({ foodDescription });
 
                 if (result.data.success) {

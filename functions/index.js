@@ -17,7 +17,7 @@ const cors = require('cors')({origin: true});
 admin.initializeApp();
 
 /**
- * Cloud Function: estimateCalories
+ * Cloud Function: estimateCaloriesV2
  *
  * Accepts a food description and returns calorie estimate using Claude AI
  * Uses onRequest with CORS middleware for proper cross-origin support
@@ -25,7 +25,7 @@ admin.initializeApp();
  * Request body: { data: { foodDescription: string } }
  * Response: { result: { ... } }
  */
-exports.estimateCalories = functions.https.onRequest((req, res) => {
+exports.estimateCaloriesV2 = functions.https.onRequest((req, res) => {
   // Handle CORS
   return cors(req, res, async () => {
     try {
