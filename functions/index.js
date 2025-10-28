@@ -13,6 +13,8 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const Anthropic = require('@anthropic-ai/sdk');
 const cors = require('cors')({origin: true});
+const fs = require('fs');
+const path = require('path');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -78,31 +80,12 @@ exports.estimateCaloriesV2 = functions.https.onRequest((req, res) => {
       apiKey: apiKey,
     });
 
-    // Construct prompt for Claude
-    const prompt = `You are a nutrition expert. Analyze the following food description and provide a detailed calorie estimate.
-
-Food description: "${foodDescription}"
-
-Important guidelines:
-- If portion sizes are not specified, assume standard/typical portions
-- Be realistic and conservative with estimates
-- If the description is vague, make reasonable assumptions
-- Consider typical preparation methods (e.g., grilled, fried, baked)
-
-Return your response in this exact JSON format (valid JSON only, no markdown):
-{
-  "calories": <total calories as a number>,
-  "confidence": "<low, medium, or high>",
-  "breakdown": {
-    "protein": <grams of protein>,
-    "carbs": <grams of carbohydrates>,
-    "fat": <grams of fat>
-  },
-  "description": "<normalized description with estimated portion sizes>",
-  "items": [
-    {"item": "<food item with portion>", "calories": <calories for this item>}
-  ]
-}`;
+    // Load prompt template from file and replace placeholder with actual food description
+    const promptTemplate = fs.readFileSync(
+      path.join(__dirname, 'prompts', 'calorie-estimation.txt'),
+      'utf8'
+    );
+    const prompt = promptTemplate.replace('{FOOD_DESCRIPTION}', foodDescription);
 
     // Call Claude API
     const message = await anthropic.messages.create({
