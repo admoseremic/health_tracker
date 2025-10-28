@@ -92,7 +92,7 @@ Important guidelines:
 Standard meals for this user:
 - When user says just "breakfast" or "lunch" without other details, use these standard meals:
   * Breakfast (standard): 11.5 oz Fairlife protein drink + 20 pecan halves (about 1 oz)
-  * Lunch (standard): Two boiled eggs + 1 medium apple + 1 cup lowfat cottage cheese (Great Value brand)
+  * Lunch (standard): Two boiled eggs + 1 medium apple + 3/4 cup lowfat cottage cheese (Great Value brand)
 - Dinner variations:
   * EveryPlate meals: If meal sounds like it came from a meal kit, use EveryPlate calorie information if available
   * Frozen pizza: Always Freschetta brand
@@ -116,9 +116,9 @@ Return your response in this exact JSON format (valid JSON only, no markdown):
   ]
 }`;
 
-    // Call Claude API
+    // Call Claude API using Haiku (faster and cheaper for this simple task)
     const message = await anthropic.messages.create({
-      model: 'claude-3-7-sonnet-20250219',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 1024,
       messages: [
         {
