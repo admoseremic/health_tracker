@@ -1,4 +1,4 @@
-const CACHE_NAME = 'health-tracker-v5';
+const CACHE_NAME = 'health-tracker-v6';
 const urlsToCache = [
   '/',
   '/index.html',
@@ -26,6 +26,12 @@ self.addEventListener('install', (event) => {
 
 // Serve cached resources when offline
 self.addEventListener('fetch', (event) => {
+  // Skip caching for POST requests (Cache API doesn't support them)
+  if (event.request.method !== 'GET') {
+    event.respondWith(fetch(event.request));
+    return;
+  }
+
   event.respondWith(
     // Network-first strategy for HTML, cache-first for everything else
     fetch(event.request)
