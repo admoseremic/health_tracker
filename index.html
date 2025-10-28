@@ -1541,17 +1541,20 @@
                 };
             } else {
                 // Single metric chart (including calories)
-                let color, label;
+                let color, label, chartType;
 
                 if (state.currentMetric === 'calories') {
                     color = '#f59e0b'; // Orange for calories
                     label = 'Calories';
+                    chartType = 'bar'; // Use bar chart for calories
                 } else if (state.currentMetric === 'weight') {
                     color = '#0891b2'; // Cyan
                     label = 'Weight (lbs)';
+                    chartType = 'line';
                 } else {
                     color = '#059669'; // Green
                     label = 'Waist (inches)';
+                    chartType = 'line';
                 }
 
                 let yAxisConfig = {};
@@ -1560,6 +1563,15 @@
                     yAxisConfig = {
                         ticks: {
                             stepSize: 5
+                        }
+                    };
+                } else if (state.currentMetric === 'calories') {
+                    // Fixed y-axis range for calories: 0 to 2500
+                    yAxisConfig = {
+                        min: 0,
+                        max: 2500,
+                        ticks: {
+                            stepSize: 250
                         }
                     };
                 }
@@ -1592,22 +1604,34 @@
                     };
                 }
 
+                // Configure dataset properties based on chart type
+                let datasetConfig = {
+                    label: label,
+                    data: data.map(d => ({
+                        x: d.date,
+                        y: d.value
+                    })),
+                    borderColor: color,
+                    backgroundColor: state.currentMetric === 'calories' ? color : color + '20',
+                };
+
+                // Add line-specific properties only for line charts
+                if (chartType === 'line') {
+                    datasetConfig.tension = 0.1;
+                    datasetConfig.pointRadius = 4;
+                    datasetConfig.pointHoverRadius = 6;
+                    datasetConfig.fill = false;
+                } else {
+                    // Bar chart specific properties
+                    datasetConfig.borderWidth = 0;
+                    datasetConfig.barPercentage = 0.7;
+                    datasetConfig.categoryPercentage = 0.8;
+                }
+
                 config = {
-                    type: 'line',
+                    type: chartType,
                     data: {
-                        datasets: [{
-                            label: label,
-                            data: data.map(d => ({
-                                x: d.date,
-                                y: d.value
-                            })),
-                            borderColor: color,
-                            backgroundColor: color + '20',
-                            tension: 0.1,
-                            pointRadius: 4,
-                            pointHoverRadius: 6,
-                            fill: false
-                        }]
+                        datasets: [datasetConfig]
                     },
                     options: {
                         responsive: true,
