@@ -339,12 +339,6 @@
             margin-top: 4px;
         }
 
-        .date-display {
-            background: #f1f5f9;
-            color: #475569;
-            font-weight: 600;
-        }
-
         @media (max-width: 768px) {
             .container {
                 padding: 16px;
@@ -542,7 +536,7 @@
                 <form id="measurement-form">
                     <div class="form-group">
                         <label class="form-label">Date</label>
-                        <input type="text" class="form-input date-display" id="date-display" readonly>
+                        <input type="date" class="form-input" id="date-input">
                     </div>
                     
                     <div class="form-group">
@@ -647,7 +641,7 @@
             modal: document.getElementById('modal-overlay'),
             closeModal: document.getElementById('close-modal'),
             form: document.getElementById('measurement-form'),
-            dateDisplay: document.getElementById('date-display'),
+            dateInput: document.getElementById('date-input'),
             weightInput: document.getElementById('weight-input'),
             waistInput: document.getElementById('waist-input'),
             systolicInput: document.getElementById('systolic-input'),
@@ -852,14 +846,12 @@
         }
 
         function updateDateDisplay() {
+            // Set date input to today in YYYY-MM-DD format (local timezone)
             const today = new Date();
-            const options = { 
-                weekday: 'short', 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric' 
-            };
-            elements.dateDisplay.value = today.toLocaleDateString('en-US', options);
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            elements.dateInput.value = `${year}-${month}-${day}`;
         }
 
         function validateBloodPressure() {
@@ -955,18 +947,14 @@
         }
 
         function collectFormData() {
-            // Get local date (not UTC) to prevent timezone issues
-            // This ensures entries are recorded for the correct day in the user's timezone
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const today = `${year}-${month}-${day}`;
+            // Get date from the date input field (user can edit this)
+            const selectedDate = elements.dateInput.value;
 
+            const now = new Date();
             const timeString = now.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 
             return {
-                date: today,
+                date: selectedDate,
                 time: timeString,
                 weight: elements.weightInput.value ? parseFloat(elements.weightInput.value) : null,
                 waist: elements.waistInput.value ? parseFloat(elements.waistInput.value) : null,
