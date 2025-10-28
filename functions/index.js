@@ -81,15 +81,45 @@ exports.estimateCaloriesV2 = functions.https.onRequest((req, res) => {
     });
 
     // Load prompt template from file and replace placeholder with actual food description
-    const promptTemplate = fs.readFileSync(
-      path.join(__dirname, 'prompts', 'calorie-estimation.txt'),
-      'utf8'
-    );
+    let promptTemplate;
+    try {
+      const promptPath = path.join(__dirname, 'prompts', 'calorie-estimation.txt');
+      console.log('Attempting to read prompt from:', promptPath);
+      promptTemplate = fs.readFileSync(promptPath, 'utf8');
+      console.log('Successfully read prompt template');
+    } catch (fileError) {
+      console.error('Error reading prompt file:', fileError);
+      // Fallback to inline prompt if file read fails
+      promptTemplate = `You are a nutrition expert. Analyze the following food description and provide a detailed calorie estimate.
+
+Food description: "{FOOD_DESCRIPTION}"
+
+Important guidelines:
+- If portion sizes are not specified, assume standard/typical portions
+- Be realistic and conservative with estimates
+- If the description is vague, make reasonable assumptions
+- Consider typical preparation methods (e.g., grilled, fried, baked)
+
+Return your response in this exact JSON format (valid JSON only, no markdown):
+{
+  "calories": <total calories as a number>,
+  "confidence": "<low, medium, or high>",
+  "breakdown": {
+    "protein": <grams of protein>,
+    "carbs": <grams of carbohydrates>,
+    "fat": <grams of fat>
+  },
+  "description": "<normalized description with estimated portion sizes>",
+  "items": [
+    {"item": "<food item with portion>", "calories": <calories for this item>}
+  ]
+}`;
+    }
     const prompt = promptTemplate.replace('{FOOD_DESCRIPTION}', foodDescription);
 
     // Call Claude API
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20240620',
+      model: 'claude-3-5-sonnet-20241022',
       max_tokens: 1024,
       messages: [
         {
