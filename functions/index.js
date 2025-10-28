@@ -13,8 +13,6 @@ const functions = require('firebase-functions');
 const admin = require('firebase-admin');
 const Anthropic = require('@anthropic-ai/sdk');
 const cors = require('cors')({origin: true});
-const fs = require('fs');
-const path = require('path');
 
 // Initialize Firebase Admin
 admin.initializeApp();
@@ -80,25 +78,28 @@ exports.estimateCaloriesV2 = functions.https.onRequest((req, res) => {
       apiKey: apiKey,
     });
 
-    // Load prompt template from file and replace placeholder with actual food description
-    let promptTemplate;
-    try {
-      const promptPath = path.join(__dirname, 'prompts', 'calorie-estimation.txt');
-      console.log('Attempting to read prompt from:', promptPath);
-      promptTemplate = fs.readFileSync(promptPath, 'utf8');
-      console.log('Successfully read prompt template');
-    } catch (fileError) {
-      console.error('Error reading prompt file:', fileError);
-      // Fallback to inline prompt if file read fails
-      promptTemplate = `You are a nutrition expert. Analyze the following food description and provide a detailed calorie estimate.
+    // Construct prompt for Claude with user-specific meal standards
+    const prompt = `You are a nutrition expert. Analyze the following food description and provide a detailed calorie estimate.
 
-Food description: "{FOOD_DESCRIPTION}"
+Food description: "${foodDescription}"
 
 Important guidelines:
 - If portion sizes are not specified, assume standard/typical portions
 - Be realistic and conservative with estimates
 - If the description is vague, make reasonable assumptions
 - Consider typical preparation methods (e.g., grilled, fried, baked)
+
+Standard meals for this user:
+- When user says just "breakfast" or "lunch" without other details, use these standard meals:
+  * Breakfast (standard): 11.5 oz Fairlife protein drink + 20 pecan halves (about 1 oz)
+  * Lunch (standard): Two boiled eggs + 1 medium apple + 1 cup lowfat cottage cheese (Great Value brand)
+- Dinner variations:
+  * EveryPlate meals: If meal sounds like it came from a meal kit, use EveryPlate calorie information if available
+  * Frozen pizza: Always Freschetta brand
+- Other details when a user mentions them:
+  * Wheat bread: Aspen Mills Honey Wheat bread from Costco
+  * Greek yogurt: Oikos Pro Vanilla (no sugar added)
+  * Cottage cheese: Great Value lowfat
 
 Return your response in this exact JSON format (valid JSON only, no markdown):
 {
@@ -114,8 +115,6 @@ Return your response in this exact JSON format (valid JSON only, no markdown):
     {"item": "<food item with portion>", "calories": <calories for this item>}
   ]
 }`;
-    }
-    const prompt = promptTemplate.replace('{FOOD_DESCRIPTION}', foodDescription);
 
     // Call Claude API
     const message = await anthropic.messages.create({
