@@ -611,12 +611,6 @@
                         <div class="error-message" id="food-error" style="display: none; margin-top: 8px;"></div>
                     </div>
 
-                    <div class="form-group">
-                        <label class="form-label">Notes</label>
-                        <textarea class="form-textarea" id="notes-input"
-                                  placeholder="Add any relevant details..."></textarea>
-                    </div>
-                    
                     <button type="submit" class="save-button" id="save-button">Save Measurement</button>
                     <div class="error-message" id="form-error" style="display: none;"></div>
                 </form>
@@ -676,7 +670,6 @@
             calorieBreakdown: document.getElementById('calorie-breakdown'),
             aiDescription: document.getElementById('ai-description'),
             foodError: document.getElementById('food-error'),
-            notesInput: document.getElementById('notes-input'),
             saveButton: document.getElementById('save-button'),
             formError: document.getElementById('form-error'),
             bpError: document.getElementById('bp-error')
@@ -754,9 +747,6 @@
 
             // Estimate calories button
             elements.estimateBtn.addEventListener('click', estimateCalories);
-
-            // Auto-focus weight input when modal opens
-            elements.weightInput.focus();
         }
 
         function selectMetric(metric) {
@@ -788,7 +778,6 @@
 
         function openModal() {
             elements.modal.style.display = 'block';
-            elements.weightInput.focus();
             resetForm();
         }
 
@@ -985,7 +974,6 @@
                 foodDescription: elements.foodInput.value ? elements.foodInput.value.trim() : null,
                 calories: elements.caloriesInput.value ? parseInt(elements.caloriesInput.value) : null,
                 aiEstimate: aiEstimateData || null,
-                notes: elements.notesInput.value || null,
                 timestamp: firebase.firestore.FieldValue.serverTimestamp()
             };
         }
@@ -998,7 +986,6 @@
                 waist: data.waist,
                 systolic: data.systolic,
                 diastolic: data.diastolic,
-                notes: data.notes,
                 timestamp: data.timestamp
             };
             await db.collection('healthData').add(healthData);
