@@ -116,9 +116,9 @@ Return your response in this exact JSON format (valid JSON only, no markdown):
   ]
 }`;
 
-    // Call Claude API using Haiku (faster and cheaper for this simple task)
+    // Call Claude API using Haiku 4.5 (faster and cheaper for this simple task)
     const message = await anthropic.messages.create({
-      model: 'claude-3-5-haiku-20241022',
+      model: 'claude-haiku-4-5-20251001',
       max_tokens: 1024,
       messages: [
         {
